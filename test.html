@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        /* ========== 完整样式 ========== */
+        /* ========== 完整样式（与之前一致） ========== */
         :root {
             --bg-body: #f1f5f9;
             --bg-sidebar: white;
@@ -800,7 +800,16 @@
     function initTheme() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark') { document.body.classList.add('dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } else { document.body.classList.remove('dark'); document.getElementById('themeToggleBtn').textContent = '🌙'; } }
     function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
     function bindButtons() {
-        // 菜单按钮
+        // --- 新增：监听扩展就绪消息 ---
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'EXTENSION_READY') {
+                window.__MAGNET_HELPER_EXTENSION__ = true;
+                console.log('✅ 磁力管理器图片助手扩展已安装');
+                showToast('✅ 图片助手扩展已启用，可自动下载CORS受限图片');
+            }
+        });
+
+        // 原有菜单绑定
         document.getElementById('menuAddMagnet').onclick = openAddMagnet;
         document.getElementById('menuImportClipboard').onclick = importFromClipboard;
         document.getElementById('menuOpenTag').onclick = () => { renderTagManagementList(); document.getElementById('tagModal').style.display = 'flex'; };
@@ -880,15 +889,8 @@
             e.target.value = '';
         });
 
-        // 检测扩展是否安装
-        setTimeout(() => {
-            if (window.__MAGNET_HELPER_EXTENSION__) {
-                console.log('✅ 磁力管理器图片助手扩展已安装');
-                showToast('✅ 图片助手扩展已启用，可自动下载CORS受限图片');
-            } else {
-                console.log('ℹ️ 未检测到图片助手扩展，部分图片可能无法自动下载');
-            }
-        }, 1000);
+        // 移除旧的 setTimeout 检测，因为现在通过消息监听即可
+        // 不再显示“未检测到扩展”的提示
     }
 
     // ========================== 初始化 ==========================
