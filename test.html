@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>磁力管理器 · 完整版（支持扩展代理）</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        /* ========== 完整样式 ========== */
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-sidebar: white;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --card-bg: white;
+            --card-border: #e2e8f0;
+            --tag-bg: #e6f0f2;
+            --tag-hover: #cbd5e1;
+            --filter-bar-bg: white;
+            --btn-bg: white;
+            --btn-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            --modal-bg: white;
+            --input-bg: white;
+            --input-border: #cbd5e1;
+            --drag-header-bg: #f8fafc;
+            --stats-badge-bg: #0f3b3f;
+            --stats-badge-text: white;
+        }
+        body.dark {
+            --bg-body: #0f172a;
+            --bg-sidebar: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e6;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --tag-bg: #334155;
+            --tag-hover: #475569;
+            --filter-bar-bg: #1e293b;
+            --btn-bg: #334155;
+            --btn-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            --modal-bg: #1e293b;
+            --input-bg: #0f172a;
+            --input-border: #475569;
+            --drag-header-bg: #0f172a;
+            --stats-badge-bg: #0f3b3f;
+            --stats-badge-text: #e2e8f0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg-body); transition: background 0.2s, color 0.2s; color: var(--text-primary); }
+        .app-layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); transition: width 0.3s ease; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar.collapsed { width: 70px; }
+        .sidebar-header { padding: 1.2rem 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
+        .sidebar.collapsed .sidebar-header { justify-content: center; }
+        .sidebar-logo { font-weight: bold; font-size: 1.2rem; white-space: nowrap; }
+        .sidebar.collapsed .sidebar-logo { display: none; }
+        .toggle-sidebar-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--text-secondary); }
+        .sidebar-menu { flex: 1; padding: 1rem 0; }
+        .menu-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: var(--text-secondary); cursor: pointer; transition: background 0.1s; white-space: nowrap; }
+        .menu-item:hover { background: var(--tag-bg); }
+        .menu-item i { width: 24px; text-align: center; }
+        .sidebar.collapsed .menu-item span { display: none; }
+        .sidebar.collapsed .menu-item { justify-content: center; padding: 12px 0; }
+        .sidebar-group details { margin: 0; border-top: 1px solid var(--border-color); }
+        .sidebar-group summary { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--text-secondary); cursor: pointer; font-weight: 500; list-style: none; }
+        .sidebar-group summary::-webkit-details-marker { display: none; }
+        .sidebar-group summary .summary-icon { width: 24px; text-align: center; }
+        .sidebar-group summary .summary-text { flex: 1; }
+        .sidebar-group summary .toggle-icon { transition: transform 0.2s; }
+        .sidebar-group[open] summary .toggle-icon { transform: rotate(90deg); }
+        .sidebar-group .menu-item { padding-left: 40px; }
+        .sidebar.collapsed .sidebar-group details { display: none; }
+        .main-content { flex: 1; padding: 2rem; overflow-x: auto; }
+        .top-actions { display: flex; gap: 12px; margin-bottom: 1.5rem; justify-content: flex-end; flex-wrap: wrap; }
+        .btn { border: none; padding: 0.5rem 1rem; border-radius: 40px; font-weight: 600; cursor: pointer; background: var(--btn-bg); box-shadow: var(--btn-shadow); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); }
+        .btn-primary { background: #0f3b3f; color: white; }
+        .btn-primary:hover { background: #0a2c2f; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-outline { border: 1px solid var(--border-color); background: var(--btn-bg); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .hide-image-btn { background: #0f3b3f; color: white; border: none; border-radius: 40px; padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s; }
+        .hide-image-btn:hover { background: #0a2c2f; }
+        body.dark .hide-image-btn { background: #2c4c4f; }
+        body.dark .hide-image-btn:hover { background: #1f3a3c; }
+        .drag-area { background: var(--card-bg); border-radius: 20px; margin-bottom: 24px; overflow: hidden; border: 1px solid var(--border-color); }
+        .drag-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--drag-header-bg); border-bottom: 1px solid var(--border-color); cursor: pointer; user-select: none; }
+        .drag-header:hover { background: var(--tag-bg); }
+        .drag-title { font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .toggle-icon { transition: transform 0.2s; }
+        .toggle-icon.collapsed { transform: rotate(-90deg); }
+        .drag-content { padding: 16px; transition: max-height 0.3s ease; }
+        .drag-content.collapsed { display: none; }
+        .tags-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; max-height: 200px; overflow-y: auto; }
+        .drag-tag { padding: 6px 14px; border-radius: 40px; cursor: grab; background: var(--tag-bg); flex-shrink: 0; transition: 0.1s; user-select: none; color: var(--text-primary); }
+        .drag-tag:active { cursor: grabbing; }
+        .drag-tag.dragging { opacity: 0.5; }
+        .drag-tag:hover { background: var(--tag-hover); }
+        .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; background: var(--filter-bar-bg); padding: 12px 16px; border-radius: 60px; box-shadow: var(--btn-shadow); border: 1px solid var(--border-color); }
+        .filter-bar select, .filter-bar input { padding: 8px 12px; border-radius: 40px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); }
+        .stats-badge { background: var(--stats-badge-bg); color: var(--stats-badge-text); padding: 6px 14px; border-radius: 40px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+        .star-rating { display: inline-flex; gap: 4px; cursor: pointer; }
+        .star-rating i { font-size: 1.1rem; color: #d1d5db; transition: color 0.1s; }
+        .star-rating i.active { color: #fbbf24; }
+        .magnet-grid { display: grid; gap: 1.5rem; margin-top: 1.5rem; grid-template-columns: repeat(4, minmax(280px, 1fr)); position: relative; }
+        @media (max-width: 1200px) { .magnet-grid { grid-template-columns: repeat(3, minmax(280px, 1fr)); } }
+        @media (max-width: 900px) { .magnet-grid { grid-template-columns: repeat(2, minmax(280px, 1fr)); } }
+        @media (max-width: 600px) { .magnet-grid { grid-template-columns: 1fr; } }
+        .magnet-card { background: var(--card-bg); border-radius: 24px; overflow: hidden; border: 1px solid var(--card-border); position: relative; cursor: pointer; }
+        .card-checkbox { position: absolute; top: 10px; left: 10px; z-index: 10; width: 20px; height: 20px; cursor: pointer; accent-color: #0f3b3f; display: none; }
+        .selection-mode .card-checkbox { display: block; }
+        .selection-mode .magnet-card { cursor: default; }
+        .preview-img { height: 160px; background-size: cover; background-position: center; cursor: pointer; }
+        .card-content { padding: 1rem; }
+        .card-title { font-weight: bold; font-size: 1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .local-badge { font-size: 0.7rem; background: #10b981; color: white; padding: 2px 6px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+        .net-badge { font-size: 0.7rem; background: #f59e0b; color: white; padding: 2px 6px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+        .tag-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+        .tag { background: var(--tag-bg); font-size: 0.7rem; padding: 2px 8px; border-radius: 30px; color: var(--text-primary); }
+        .magnet-link { display: inline-block; font-size: 0.7rem; color: #5b6e8c; background: var(--input-bg); padding: 4px 8px; border-radius: 12px; margin: 8px 0; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; text-decoration: none; }
+        .magnet-link:hover { background: var(--tag-hover); text-decoration: underline; }
+        .card-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .icon-btn { background: transparent; border: none; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; padding: 0 4px; }
+        .icon-btn:hover { color: #0f3b3f; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000000; }
+        .modal-card { background: var(--modal-bg); width: 90%; max-width: 800px; border-radius: 32px; display: flex; flex-direction: column; max-height: 85vh; overflow-y: auto; }
+        .modal-card .flex-between { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        .modal-card form { padding: 1.2rem 1.8rem; }
+        .modal-card .duplicate-list, .modal-card .rule-editor { flex: 1; overflow-y: auto; padding: 1rem; }
+        .duplicate-group { margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; }
+        .duplicate-group h4 { background: var(--drag-header-bg); padding: 8px 12px; margin: 0; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .group-header-actions { display: flex; gap: 8px; }
+        .duplicate-item { padding: 8px 12px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; }
+        .duplicate-item:last-child { border-bottom: none; }
+        .duplicate-item input { margin-right: 8px; }
+        .duplicate-info { flex: 1; }
+        .duplicate-title { font-weight: 500; }
+        .duplicate-magnet { font-size: 0.7rem; color: #64748b; font-family: monospace; }
+        .merge-tags-btn, .delete-other-btn, .copy-group-links-btn, .apply-group-btn { margin-left: auto; background: var(--tag-bg); border: none; border-radius: 20px; padding: 4px 12px; cursor: pointer; font-size: 0.7rem; margin-left: 8px; }
+        .delete-other-btn { background: #ef4444; color: white; }
+        .delete-other-btn:hover { background: #dc2626; }
+        .copy-group-links-btn { background: #0f3b3f; color: white; }
+        .copy-group-links-btn:hover { background: #0a2c2f; }
+        .apply-group-btn { background: #10b981; color: white; }
+        .apply-group-btn:hover { background: #0e9f6e; }
+        .group-select-all { background: #10b981; color: white; border: none; border-radius: 20px; padding: 4px 10px; cursor: pointer; font-size: 0.7rem; }
+        .form-group { margin-bottom: 1rem; }
+        label { font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 8px 12px; border-radius: 16px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); }
+        .tag-option { background: var(--tag-bg); padding: 4px 10px; border-radius: 30px; display: inline-block; margin: 4px; cursor: pointer; color: var(--text-primary); }
+        .tag-option.selected { background: #0f3b3f; color: white; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .rating-filter { display: flex; gap: 8px; align-items: center; }
+        .rating-filter .star-filter { display: flex; gap: 2px; cursor: pointer; }
+        .rating-filter .star-filter i { font-size: 1.2rem; color: #d1d5db; }
+        .rating-filter .star-filter i.active { color: #fbbf24; }
+        .copy-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 8px 20px; border-radius: 40px; font-size: 0.9rem; z-index: 3000; animation: fadeOut 1.5s forwards; }
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        .image-preview-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 2000; cursor: pointer; }
+        .image-preview-modal img { max-width: 90%; max-height: 90%; border-radius: 12px; }
+        .rule-item { background: var(--drag-header-bg); padding: 10px 12px; border-radius: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .rule-keyword { font-weight: bold; color: #0f3b3f; }
+        .rule-tag { color: #10b981; margin-left: 8px; }
+        .rule-actions button { background: var(--tag-bg); border: none; border-radius: 20px; padding: 4px 10px; font-size: 0.7rem; cursor: pointer; }
+        .duplicate-mode-selector { margin-bottom: 1rem; display: flex; gap: 16px; align-items: center; }
+        .similarity-control { margin: 10px 0 0 0; display: none; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .similarity-control label { font-size: 0.85rem; }
+        .floating-controls {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            z-index: 999998;
+        }
+        .floating-controls .batch-bar {
+            background: var(--card-bg);
+            border-radius: 60px;
+            padding: 10px 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(4px);
+            flex-wrap: wrap;
+        }
+        .floating-controls .batch-bar .batch-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .float-import-btn {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #306eff;
+            color: white;
+            border: none;
+            border-radius: 30px 0 0 30px;
+            padding: 12px 10px;
+            width: auto;
+            min-width: 56px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 999999;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+            transition: background 0.2s, padding 0.2s;
+            line-height: 1.3;
+            font-family: system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .float-import-btn:hover {
+            background: #0a2c2f;
+            padding-right: 14px;
+        }
+        body.dark .float-import-btn {
+            background: #2c4c4f;
+            color: #f1f5f9;
+        }
+        body.dark .float-import-btn:hover {
+            background: #1f3a3c;
+        }
+        .theme-switch-btn {
+            margin-left: 12px;
+            background: var(--tag-bg);
+            border: none;
+            border-radius: 30px;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+        .hint-text { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
+        .batch-links-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 0.5rem;
+            background: var(--input-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .batch-link-item {
+            display: block;
+            font-family: monospace;
+            font-size: 0.8rem;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border-color);
+            color: #0f3b3f;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .batch-link-item:last-child { border-bottom: none; }
+        .batch-link-item:hover { background: var(--tag-hover); text-decoration: underline; }
+        body.dark .batch-link-item { color: #90caf9; }
+        body.hide-images .preview-img {
+            background-image: none !important;
+            background-color: var(--input-bg);
+        }
+        .word-list-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+        .word-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border-color);
+            font-family: monospace;
+        }
+        .word-item:last-child { border-bottom: none; }
+        .delete-word-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 2px 10px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .delete-word-btn:hover { background: #dc2626; }
+        .add-word-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .add-word-input input { flex: 1; }
+        .fail-list-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .fail-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .fail-info { flex: 1; }
+        .fail-title { font-weight: bold; }
+        .fail-url {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+        .fail-reason {
+            font-size: 0.7rem;
+            color: #ef4444;
+            margin-top: 4px;
+        }
+        .retry-fail-btn {
+            background: #0f3b3f;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .retry-fail-btn:hover { background: #0a2c2f; }
+        .retry-all-btn, .delete-all-fail-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
+        .delete-all-fail-btn { background: #ef4444; }
+        .delete-all-fail-btn:hover { background: #dc2626; }
+        .progress-container {
+            padding: 1rem;
+            text-align: center;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background-color: #10b981;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            font-size: 0.9rem;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">⚡ 磁力管理器</div>
+            <div style="display: flex; gap: 8px;"><button id="themeToggleBtn" class="theme-switch-btn" title="切换白天/夜晚模式">🌙</button><button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button></div>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item" id="menuAddMagnet"><i class="fas fa-plus-circle"></i><span>➕ 添加磁力</span></div>
+            <div class="menu-item" id="menuImportClipboard"><i class="fas fa-paste"></i><span>📋 从剪贴板导入</span></div>
+            <div class="menu-item" id="menuOpenTag"><i class="fas fa-hashtag"></i><span>🏷️ 管理标签</span></div>
+            <div class="menu-item" id="menuOpenAutoTagRule"><i class="fas fa-robot"></i><span>🤖 自动标签规则</span></div>
+            <div class="menu-item" id="menuApplyRulesToAll"><i class="fas fa-magic"></i><span>✨ 批量应用规则</span></div>
+            <div class="sidebar-group"><details><summary><i class="fas fa-ellipsis-h summary-icon"></i><span class="summary-text">更多工具</span><i class="fas fa-chevron-right toggle-icon"></i></summary>
+                <div class="menu-item" id="menuFindDuplicates"><i class="fas fa-clone"></i><span>🔍 清理重复项</span></div>
+                <div class="menu-item" id="menuManageFilterWords"><i class="fas fa-filter"></i><span>✂️ 管理标题过滤词</span></div>
+                <div class="menu-item" id="menuBatchCleanTitles"><i class="fas fa-broom"></i><span>🧹 批量清理标题</span></div>
+                <div class="menu-item" id="menuConvertAllImagesToLocal"><i class="fas fa-database"></i><span>📦 一键转换所有图片到本地</span></div>
+                <div class="menu-item" id="menuViewFailList"><i class="fas fa-list-ul"></i><span>⚠️ 查看转换失败列表</span></div>
+                <div class="menu-item" id="menuFullBackupWithImages"><i class="fas fa-archive"></i><span>💾 完整备份（含图片）</span></div>
+                <div class="menu-item" id="menuFullRestoreWithImages"><i class="fas fa-folder-open"></i><span>📂 恢复完整备份</span></div>
+                <div class="menu-item" id="menuRestoreImagesFromFolder"><i class="fas fa-folder-open"></i><span>📁 从文件夹导入图片</span></div>
+                <div class="menu-item" id="menuExportData"><i class="fas fa-download"></i><span>💾 导出数据(单文件)</span></div>
+                <div class="menu-item" id="menuImportData"><i class="fas fa-upload"></i><span>📂 导入数据(单文件)</span></div>
+                <div class="menu-item" id="menuSaveToFolder"><i class="fas fa-folder-open"></i><span>💿 保存到 data 文件夹</span></div>
+                <div class="menu-item" id="menuLoadFromFolder"><i class="fas fa-folder-tree"></i><span>📀 从 data 文件夹加载</span></div>
+                <div class="menu-item" id="menuResetData"><i class="fas fa-trash-alt"></i><span>🗑️ 重置所有数据</span></div>
+            </details></div>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="top-actions"><button id="hideImageBtn" class="hide-image-btn"><i class="fas fa-image"></i> 隐藏图片</button><button class="btn btn-primary" id="topAddMagnetBtn">➕ 添加磁力</button><button class="btn btn-success" id="topImportClipboardBtn">📋 从剪贴板导入</button></div>
+        <div class="drag-area" id="tagsDragArea"><div class="drag-header" data-target="tagsContent"><div class="drag-title"><i class="fas fa-hashtag"></i> 🏷️ 拖拽标签可排序（点击筛选）</div><i class="fas fa-chevron-down toggle-icon"></i></div><div class="drag-content" id="tagsContent"><div id="draggableTagsList" class="tags-container"></div></div></div>
+        <div class="filter-bar">
+            <input type="text" id="searchInput" placeholder="🔍 搜索标题或标签" style="width:200px">
+            <div class="rating-filter"><span>评分筛选：</span><div class="star-filter" id="ratingFilter"><i data-rating="1" class="far fa-star"></i><i data-rating="2" class="far fa-star"></i><i data-rating="3" class="far fa-star"></i><i data-rating="4" class="far fa-star"></i><i data-rating="5" class="far fa-star"></i></div><button id="clearRatingFilter" class="btn-outline btn" style="padding:4px 12px;">清除</button></div>
+            <select id="columnsSelect" style="width: auto;"><option value="2">每行 2 张</option><option value="3">每行 3 张</option><option value="4" selected>每行 4 张</option><option value="5">每行 5 张</option></select>
+            <div class="page-size-selector"><span>每次加载：</span><select id="pageSizeSelect"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option></select></div>
+            <button id="resetFilterBtn" class="btn btn-outline">重置</button><div id="statsDisplay" class="stats-badge">📊 0 张卡片</div>
+        </div>
+        <div id="magnetGridContainer" class="magnet-grid"></div>
+        <div id="loadMoreTrigger" class="loading-trigger" style="display: none;">向下滚动加载更多...</div>
+    </div>
+</div>
+
+<!-- 右侧浮动导入按钮 -->
+<button id="floatImportBtn" class="float-import-btn" title="从剪贴板导入磁力链接 JSON">
+    <i class="fas fa-paste"></i>
+    <span>导入</span>
+</button>
+
+<!-- 批量操作浮条 -->
+<div class="floating-controls"><div id="floatingBatchBar" class="batch-bar"><span id="selectedCount">已选择 0 个卡片</span><div class="batch-actions"><button id="batchAddTagsBtn" class="btn btn-primary">🏷️ 批量添加标签</button><button id="batchCopyLinksBtn" class="btn btn-success">🔗 批量复制链接</button><button id="batchSaveImagesBtn" class="btn btn-primary" style="background:#0f3b3f;">💾 批量存本地</button><button id="batchDeleteBtn" class="btn btn-danger">🗑️ 批量删除</button><button id="selectAllCurrentBtn" class="btn btn-outline">✔️ 全选当前视图</button><button id="selectAllFilteredBtn" class="btn btn-outline">⭐ 全选全部筛选结果</button><button id="cancelSelectionBtn" class="btn btn-outline">❌ 取消选择</button></div></div></div>
+
+<!-- ======== 模态框区域 ======== -->
+<!-- 批量复制 -->
+<div id="batchCopyModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>📋 批量磁力链接 (点击链接可调用扩展)</h3><button id="closeBatchCopyModalBtn" class="icon-btn">✖</button></div><div style="padding: 1rem;"><div id="batchLinksContainer" class="batch-links-container"></div><div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 1rem;"><button id="copyAllBatchLinksBtn" class="btn btn-primary">📋 复制全部</button><button id="cancelBatchCopyBtn" class="btn btn-outline">关闭</button></div></div></div></div>
+<!-- 过滤词 -->
+<div id="filterWordsModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>✂️ 管理标题过滤词 (精确删除)</h3><button id="closeFilterWordsModalBtn" class="icon-btn">✖</button></div><div style="padding: 1rem;"><div class="word-list-container" id="filterWordsList"></div><div class="add-word-input"><input type="text" id="newFilterWord" placeholder="例如: 【U5A5.COM】" /><button id="addFilterWordBtn" class="btn btn-primary">➕ 添加</button></div><div class="hint-text">💡 提示：导入剪贴板或使用“批量清理标题”时，会自动删除标题中完全匹配的文本。</div></div></div></div>
+<!-- 失败列表 -->
+<div id="failListModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>⚠️ 转换失败的图片列表</h3><button id="closeFailModalBtn" class="icon-btn">✖</button></div><div style="padding: 1rem;"><div style="display: flex; justify-content: flex-end; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;"><button id="retryAllFailBtn" class="retry-all-btn">🔄 全部重试</button><button id="deleteAllFailCardsBtn" class="delete-all-fail-btn">🗑️ 删除全部失败卡片</button><button id="copyFailListBtn" class="btn btn-primary">📋 复制所有磁力链接</button></div><div id="failListContainer" class="fail-list-container"></div><div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 8px;"><button id="closeFailModalBtn2" class="btn btn-outline">关闭</button></div></div></div></div>
+<!-- 进度 -->
+<div id="progressModal" class="modal"><div class="modal-card" style="max-width: 400px;"><div class="flex-between"><h3>🔄 图片转换进度</h3><button id="closeProgressBtn" class="icon-btn">✖</button></div><div class="progress-container"><div class="progress-text" id="progressInfo">准备中...</div><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><div class="progress-text" id="progressDetail">0 / 0</div></div></div></div>
+<!-- 磁力编辑/新建 -->
+<div id="magnetModal" class="modal"><div class="modal-card"><div class="flex-between"><h3 id="modalTitle">新建磁力</h3><button id="closeModalBtn" class="icon-btn">✖</button></div><form id="magnetForm"><input type="hidden" id="magnetId"><div class="form-group"><label>磁力链接 *</label><input type="text" id="magnetLink" required><div class="hint-text">比较时自动忽略大小写</div></div><div class="form-group"><label>标题 *</label><input type="text" id="magnetTitle" required></div><div class="form-group"><label>文件大小</label><input type="text" id="fileSize" placeholder="2.5 GB"></div>
+            <div class="form-group">
+                <label>预览图URL</label>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="imageUrl" placeholder="可粘贴网络图片链接，或点击右侧上传图片" style="flex: 1; min-width: 150px;">
+                    <button type="button" id="uploadImageBtn" class="btn btn-primary" style="white-space: nowrap;">📁 上传图片</button>
+                    <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+                </div>
+                <div id="uploadStatus" class="hint-text" style="margin-top: 4px;"></div>
+            </div>
+            <div class="form-group"><label>标签</label><div id="tagSelectorContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 16px; padding: 8px;"></div></div><div class="form-group"><button type="submit" class="btn btn-primary" style="width:100%">保存</button></div></form></div></div>
+<!-- 标签管理 -->
+<div id="tagModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>管理标签</h3><button id="closeTagModalBtn">✖</button></div><div class="tag-manager" style="padding: 1rem 1.5rem;"><div id="tagList"></div><div style="margin-top: 1rem;"><input type="text" id="newTagName" placeholder="新标签"><button id="addTagBtn" class="btn btn-primary" style="margin-top: 0.5rem;">添加</button></div></div></div></div>
+<!-- 批量标签 -->
+<div id="batchTagModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>批量添加标签</h3><button id="closeBatchTagModalBtn" class="icon-btn">✖</button></div><div class="batch-tag-selector"><div id="batchTagSelectorContainer" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 16px; padding: 8px;"></div><div style="margin-top: 1rem; display: flex; gap: 8px; justify-content: flex-end;"><button id="confirmBatchTagsBtn" class="btn btn-primary">添加标签</button><button id="cancelBatchTagsBtn" class="btn btn-outline">取消</button></div></div></div></div>
+<!-- 自动规则 -->
+<div id="autoTagRuleModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>自动标签规则</h3><button id="closeRuleModalBtn" class="icon-btn">✖</button></div><div class="rule-editor"><div id="rulesListContainer" style="max-height: 300px; overflow-y: auto;"></div><div style="margin-top: 1rem;"><input type="text" id="newRuleKeyword" placeholder="关键词 (如 4K)" style="width: 48%; display: inline-block; margin-right: 2%;"><select id="newRuleTagSelect" style="width: 48%; display: inline-block;"></select><button id="addRuleBtn" class="btn btn-primary" style="margin-top: 0.5rem; width: 100%;">添加规则</button></div><div class="hint-text">规则说明：标题包含关键词时，自动添加对应标签（不区分大小写）。</div></div></div></div>
+<!-- 重复清理 -->
+<div id="duplicateModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>清理重复项</h3><button id="closeDuplicateModalBtn" class="icon-btn">✖</button></div><div class="duplicate-list"><div class="duplicate-mode-selector"><span>检测模式：</span><label><input type="radio" name="dupMode" value="magnet" checked> 按磁力链接 (忽略大小写)</label><label><input type="radio" name="dupMode" value="title"> 按标题 (模糊匹配)</label></div><div class="similarity-control" id="similarityControl"><span>相似度阈值：</span><input type="range" id="similaritySlider" min="70" max="100" value="80" step="1"><span id="similarityValue">80%</span><span style="font-size:0.7rem;"> (仅按标题模式生效)</span></div><div id="duplicateGroupsContainer"></div><div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 1rem;"><button id="applyDuplicateResolutionBtn" class="btn btn-primary">全局应用 (所有组保留勾选，删除其余)</button><button id="cancelDuplicateBtn" class="btn btn-outline">取消</button></div></div></div></div>
+
+<script>
+(function(){
+    // ========================== 配置 ==========================
+    const DB_NAME = 'MagnetManagerDB';
+    const DB_VERSION = 6;
+    const STORES = { tags: 'tags', magnets: 'magnets', autoTagRules: 'autoTagRules', filterWords: 'filterWords', images: 'images', failList: 'failList' };
+    let db = null;
+    let tags = [{ id: 1, name: "4K" }, { id: 2, name: "HDR" }, { id: 3, name: "蓝光原盘" }];
+    let magnets = [];
+    let autoTagRules = [];
+    let filterWords = [];
+    let failList = [];
+    let nextTagId = 4, nextMagnetId = 1;
+    let currentRatingFilter = 0;
+    let collapsedTags = false;
+    let selectionMode = false;
+    let selectedCardIds = new Set();
+    let currentLoadedCount = 0;
+    let pageSize = 50;
+    let isLoadingMore = false;
+    let allFilteredMagnets = [];
+    let scrollListener = null;
+    let dragSrcIndex = null;
+    let lastSelectedCardId = null;
+    let tagOrder = [];
+    let originalHrefs = [];
+    let imageBlobCache = new Map();
+
+    // ========================== 基础工具 ==========================
+    function cleanTitle(title) { if (!title) return title; let newTitle = title; for (const word of filterWords) { if (!word) continue; newTitle = newTitle.split(word).join(''); } return newTitle.trim(); }
+    function escapeHtml(s) { return s ? s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;') : ''; }
+    function showToast(msg, isError = false) { const t = document.createElement('div'); t.className='copy-toast'; t.textContent=msg; t.style.background = isError ? '#ef4444' : '#10b981'; document.body.appendChild(t); setTimeout(()=>t.remove(),2000); }
+    function copyMagnetLink(link) { navigator.clipboard.writeText(link).then(()=>showToast('✅ 磁力链接已复制')).catch(()=>showToast('❌ 复制失败')); }
+    function showImagePreview(url) { const modal = document.createElement('div'); modal.className='image-preview-modal'; modal.onclick=()=>modal.remove(); const img=document.createElement('img'); img.src=url; img.onerror=()=>{modal.remove();showToast('图片加载失败');}; modal.appendChild(img); document.body.appendChild(modal); }
+    function updateStats(displayCount, totalCount) { const statsDiv = document.getElementById('statsDisplay'); if (statsDiv) { if (displayCount === totalCount) statsDiv.innerHTML = `📊 共 ${displayCount} 张卡片`; else statsDiv.innerHTML = `📊 筛选 ${displayCount} / 共 ${totalCount} 张`; } }
+    function updateGridColumns() { const cols = parseInt(document.getElementById('columnsSelect').value, 10); const grid = document.getElementById('magnetGridContainer'); if (grid) grid.style.gridTemplateColumns = `repeat(${cols}, minmax(280px, 1fr))`; }
+    function filterByTag(tagName) { const searchInput = document.getElementById('searchInput'); searchInput.value = tagName; searchInput.dispatchEvent(new Event('input', { bubbles: true })); }
+    function saveCollapsedState() { localStorage.setItem('collapsed_tags_v26', collapsedTags); }
+    function loadCollapsedState() { const t = localStorage.getItem('collapsed_tags_v26'); if (t !== null) collapsedTags = t === 'true'; }
+    function toggleContent(targetId, iconElement, isCollapsed) { const content = document.getElementById(targetId); if (!content) return; if (isCollapsed) { content.classList.add('collapsed'); if (iconElement) iconElement.classList.add('collapsed'); } else { content.classList.remove('collapsed'); if (iconElement) iconElement.classList.remove('collapsed'); } }
+    function bindCollapsible() { const tagsHeader = document.querySelector('#tagsDragArea .drag-header'); const tagsIcon = tagsHeader.querySelector('.toggle-icon'); tagsHeader.addEventListener('click', () => { collapsedTags = !collapsedTags; toggleContent('tagsContent', tagsIcon, collapsedTags); saveCollapsedState(); }); toggleContent('tagsContent', tagsIcon, collapsedTags); }
+    function saveTagOrder() { localStorage.setItem('tagOrder', JSON.stringify(tagOrder)); }
+    function sortTagsByOrder() { if (!tagOrder || tagOrder.length === 0) return; const orderMap = new Map(); tagOrder.forEach((id, idx) => orderMap.set(id, idx)); tags.sort((a, b) => (orderMap.get(a.id) ?? Infinity) - (orderMap.get(b.id) ?? Infinity)); }
+    function updateTagOrderFromTags() { tagOrder = tags.map(t => t.id); saveTagOrder(); }
+
+    // ========================== IndexedDB 操作 ==========================
+    function openDB() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, DB_VERSION); request.onerror = () => reject(request.error); request.onsuccess = () => { db = request.result; resolve(db); }; request.onupgradeneeded = (event) => { const db = event.target.result; if (!db.objectStoreNames.contains(STORES.tags)) db.createObjectStore(STORES.tags, { keyPath: 'id' }); if (!db.objectStoreNames.contains(STORES.magnets)) db.createObjectStore(STORES.magnets, { keyPath: 'id' }); if (!db.objectStoreNames.contains(STORES.autoTagRules)) db.createObjectStore(STORES.autoTagRules, { keyPath: 'id', autoIncrement: true }); if (!db.objectStoreNames.contains(STORES.filterWords)) db.createObjectStore(STORES.filterWords, { keyPath: 'id', autoIncrement: true }); if (!db.objectStoreNames.contains(STORES.images)) db.createObjectStore(STORES.images, { keyPath: 'id' }); if (!db.objectStoreNames.contains(STORES.failList)) db.createObjectStore(STORES.failList, { keyPath: 'cardId' }); }; }); }
+    function saveFilterWordsToDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.filterWords], 'readwrite'); const store = tx.objectStore(STORES.filterWords); const clearReq = store.clear(); clearReq.onsuccess = () => { let completed = 0; if (filterWords.length === 0) { resolve(); return; } for (let i = 0; i < filterWords.length; i++) { const req = store.put({ id: i, word: filterWords[i] }); req.onsuccess = () => { completed++; if (completed === filterWords.length) resolve(); }; req.onerror = (e) => reject(e.target.error); } }; clearReq.onerror = (e) => reject(e.target.error); }); }
+    function loadFilterWordsFromDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.filterWords], 'readonly'); const store = tx.objectStore(STORES.filterWords); const req = store.getAll(); req.onsuccess = () => { filterWords = req.result.map(item => item.word).filter(w => w && w.trim() !== ''); resolve(); }; req.onerror = (e) => reject(e.target.error); }); }
+    function saveToDB() { return new Promise((resolve, reject) => { if (!db) { reject(new Error('Database not initialized')); return; } const tx = db.transaction([STORES.tags, STORES.magnets, STORES.autoTagRules], 'readwrite'); const tagsStore = tx.objectStore(STORES.tags); const magnetsStore = tx.objectStore(STORES.magnets); const rulesStore = tx.objectStore(STORES.autoTagRules); const clearTags = tagsStore.clear(); const clearMagnets = magnetsStore.clear(); const clearRules = rulesStore.clear(); let allCleared = 0; function checkCompleted() { allCleared++; if (allCleared === 3) { for (const tag of tags) tagsStore.put(tag); for (const magnet of magnets) magnetsStore.put(magnet); for (let i = 0; i < autoTagRules.length; i++) rulesStore.put({ id: i, keyword: autoTagRules[i].keyword, tagId: autoTagRules[i].tagId }); tx.oncomplete = () => { updateTagOrderFromTags(); saveFilterWordsToDB().then(resolve).catch(reject); }; tx.onerror = (e) => reject(e.target.error); } } clearTags.onsuccess = checkCompleted; clearMagnets.onsuccess = checkCompleted; clearRules.onsuccess = checkCompleted; }); }
+    function loadFromDB() { return new Promise((resolve, reject) => { if (!db) { reject(new Error('Database not initialized')); return; } const tx = db.transaction([STORES.tags, STORES.magnets, STORES.autoTagRules], 'readonly'); const tagsStore = tx.objectStore(STORES.tags); const magnetsStore = tx.objectStore(STORES.magnets); const rulesStore = tx.objectStore(STORES.autoTagRules); const tagsReq = tagsStore.getAll(); const magnetsReq = magnetsStore.getAll(); const rulesReq = rulesStore.getAll(); let result = { tags: [], magnets: [], rules: [] }; let pending = 3; function done() { if (--pending === 0) resolve(result); } tagsReq.onsuccess = () => { result.tags = tagsReq.result; done(); }; magnetsReq.onsuccess = () => { result.magnets = magnetsReq.result; done(); }; rulesReq.onsuccess = () => { result.rules = rulesReq.result; done(); }; tx.onerror = (e) => reject(e.target.error); }); }
+    function saveFailListToDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.failList], 'readwrite'); const store = tx.objectStore(STORES.failList); const clearReq = store.clear(); clearReq.onsuccess = () => { let completed = 0; if (failList.length === 0) { resolve(); return; } for (const item of failList) { const req = store.put(item); req.onsuccess = () => { completed++; if (completed === failList.length) resolve(); }; req.onerror = (e) => reject(e.target.error); } }; clearReq.onerror = (e) => reject(e.target.error); }); }
+    function loadFailListFromDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.failList], 'readonly'); const store = tx.objectStore(STORES.failList); const req = store.getAll(); req.onsuccess = () => { failList = req.result || []; resolve(); }; req.onerror = (e) => reject(e.target.error); }); }
+    function storeImageBlob(url, blob) { if (!db) return null; const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readwrite'); const store = tx.objectStore(STORES.images); const req = store.put({ id: id, blob: blob, url: url, timestamp: Date.now() }); req.onsuccess = () => resolve(id); req.onerror = (e) => reject(e.target.error); }); }
+    async function getImageBlob(imageId) { 
+        if (!db) return null;
+        if (imageBlobCache.has(imageId)) return imageBlobCache.get(imageId);
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([STORES.images], 'readonly');
+            const store = tx.objectStore(STORES.images);
+            const req = store.get(imageId);
+            req.onsuccess = () => {
+                if (req.result && req.result.blob) {
+                    imageBlobCache.set(imageId, req.result.blob);
+                    resolve(req.result.blob);
+                } else {
+                    console.warn(`图片未找到: ${imageId}`);
+                    resolve(null);
+                }
+            };
+            req.onerror = (e) => reject(e.target.error);
+        });
+    }
+    async function getImageUrlForCard(magnet) {
+        if (!magnet.imageUrl) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3ENo Preview%3C/text%3E%3C/svg%3E';
+        if (magnet.imageUrl.startsWith('img_')) {
+            const blob = await getImageBlob(magnet.imageUrl);
+            if (blob) return URL.createObjectURL(blob);
+            else return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3EMissing%3C/text%3E%3C/svg%3E';
+        }
+        return magnet.imageUrl;
+    }
+
+    // ========================== 扩展代理下载 ==========================
+    function fetchImageViaExtension(url) {
+        return new Promise((resolve, reject) => {
+            if (!window.__MAGNET_HELPER_EXTENSION__) {
+                reject(new Error('未安装磁力管理器图片助手扩展'));
+                return;
+            }
+            const handler = (event) => {
+                if (event.data.type === 'IMAGE_DOWNLOAD_RESULT') {
+                    window.removeEventListener('message', handler);
+                    if (event.data.success) {
+                        resolve(event.data.blob);
+                    } else {
+                        reject(new Error(event.data.error || '扩展下载失败'));
+                    }
+                }
+            };
+            window.addEventListener('message', handler);
+            window.postMessage({ type: 'REQUEST_IMAGE_DOWNLOAD', url: url }, '*');
+            setTimeout(() => {
+                window.removeEventListener('message', handler);
+                reject(new Error('扩展未响应，请检查扩展是否启用'));
+            }, 15000);
+        });
+    }
+
+    // ========================== 核心：图片保存（支持扩展回退） ==========================
+    async function saveImageToLocal(magnetId, skipToast = false, retryOn429 = true) {
+        const magnet = magnets.find(m => m.id === magnetId);
+        if (!magnet || !magnet.imageUrl) { if(!skipToast) showToast('没有可保存的图片', true); return false; }
+        if (magnet.imageUrl.startsWith('img_')) { if(!skipToast) showToast('图片已经是本地存储', false); return false; }
+
+        const fetchWithRetry = async (retry = true) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            try {
+                const response = await fetch(magnet.imageUrl, { mode: 'cors', referrerPolicy: 'unsafe-url', cache: 'reload', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!response.ok) {
+                    if (retry && response.status === 429) {
+                        await new Promise(r => setTimeout(r, 2000));
+                        return fetchWithRetry(false);
+                    }
+                    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.startsWith('image/')) throw new Error(`非图片类型: ${contentType}`);
+                const blob = await response.blob();
+                if (blob.size === 0) throw new Error('图片大小为0');
+                return blob;
+            } catch(e) {
+                clearTimeout(timeoutId);
+                throw e;
+            }
+        };
+
+        let blob = null;
+        let fromExtension = false;
+        try {
+            blob = await fetchWithRetry(retryOn429);
+        } catch (e) {
+            if (e.message.includes('Failed to fetch') || e.message.includes('CORS') || e.message.includes('NetworkError') || e.message.includes('HTTP')) {
+                try {
+                    if(!skipToast) showToast('标准下载失败，尝试通过扩展代理...', false);
+                    blob = await fetchImageViaExtension(magnet.imageUrl);
+                    fromExtension = true;
+                } catch (extError) {
+                    let reason = extError.message;
+                    if(!skipToast) showToast(`图片下载失败: ${reason}`, true);
+                    const existing = failList.find(f => f.cardId === magnetId);
+                    if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason });
+                    else existing.reason = reason;
+                    await saveFailListToDB();
+                    return false;
+                }
+            } else {
+                let reason = e.message;
+                if(!skipToast) showToast(`图片下载失败: ${reason}`, true);
+                const existing = failList.find(f => f.cardId === magnetId);
+                if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason });
+                else existing.reason = reason;
+                await saveFailListToDB();
+                return false;
+            }
+        }
+
+        try {
+            const newId = await storeImageBlob(magnet.imageUrl, blob);
+            if (newId) {
+                magnet.imageUrl = newId;
+                await saveToDB();
+                const idx = failList.findIndex(f => f.cardId === magnetId);
+                if (idx !== -1) {
+                    failList.splice(idx, 1);
+                    await saveFailListToDB();
+                }
+                updateFilteredList();
+                currentLoadedCount = 0;
+                await renderLoadedCards();
+                updateStats(allFilteredMagnets.length, magnets.length);
+                if(!skipToast) showToast('图片已保存到本地，链接永不过期' + (fromExtension ? ' (通过扩展代理)' : ''));
+                return true;
+            } else {
+                throw new Error('存储到IndexedDB失败');
+            }
+        } catch (e) {
+            let reason = e.message;
+            if(!skipToast) showToast(`存储失败: ${reason}`, true);
+            const existing = failList.find(f => f.cardId === magnetId);
+            if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason });
+            else existing.reason = reason;
+            await saveFailListToDB();
+            return false;
+        }
+    }
+
+    // ========================== 原有功能：批量转换等（已适配新saveImageToLocal） ==========================
+    function showProgressModal() { document.getElementById('progressModal').style.display = 'flex'; }
+    function hideProgressModal() { document.getElementById('progressModal').style.display = 'none'; }
+    function updateProgress(current, total, success, failed) { const percent = total > 0 ? (current / total) * 100 : 0; document.getElementById('progressFill').style.width = percent + '%'; document.getElementById('progressDetail').innerText = `${current} / ${total}`; document.getElementById('progressInfo').innerHTML = `已处理: ${current}<br>成功: ${success} | 失败: ${failed}`; }
+
+    async function convertAllImagesToLocal() {
+        const needConvert = magnets.filter(m => m.imageUrl && !m.imageUrl.startsWith('img_') && (m.imageUrl.startsWith('http://') || m.imageUrl.startsWith('https://')));
+        if (needConvert.length === 0) { showToast('没有需要转换的网络图片'); return; }
+        let processed = 0, success = 0, failed = 0, newFailList = [];
+        showProgressModal();
+        for (const magnet of needConvert) {
+            const result = await saveImageToLocal(magnet.id, true, true);
+            if (result) success++; else failed++;
+            processed++;
+            updateProgress(processed, needConvert.length, success, failed);
+            await new Promise(r => setTimeout(r, 200));
+        }
+        hideProgressModal();
+        showToast(`转换完成: ${success} 张成功, ${failed} 张失败`);
+        if (failed > 0) showFailListModal();
+        updateFilteredList();
+        currentLoadedCount = 0;
+        await renderLoadedCards();
+        updateStats(allFilteredMagnets.length, magnets.length);
+    }
+
+    async function showFailListModal() {
+        const container = document.getElementById('failListContainer'); if (!container) return;
+        if (failList.length === 0) { container.innerHTML = '<div style="text-align:center;padding:1rem">暂无失败项</div>'; }
+        else { container.innerHTML = ''; for (const fail of failList) { const div = document.createElement('div'); div.className = 'fail-item'; div.innerHTML = `<div class="fail-info"><div class="fail-title">${escapeHtml(fail.title)}</div><div class="fail-url">${escapeHtml(fail.url)}</div><div class="fail-reason">❌ ${escapeHtml(fail.reason || '未知错误')}</div></div><button class="retry-fail-btn" data-cardid="${fail.cardId}">🔄 重试</button>`; container.appendChild(div); } container.querySelectorAll('.retry-fail-btn').forEach(btn => { btn.addEventListener('click', async (e) => { e.stopPropagation(); const cardId = parseInt(btn.getAttribute('data-cardid')); await saveImageToLocal(cardId, false, true); await loadFailListFromDB(); showFailListModal(); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }); }); }
+        document.getElementById('failListModal').style.display = 'flex';
+    }
+    async function retryAllFailures() { if (failList.length === 0) { showToast('没有需要重试的失败项'); return; } let successCount = 0, failCount = 0; for (const fail of failList) { const magnet = magnets.find(m => m.id === fail.cardId); if (!magnet) continue; if (magnet.imageUrl && magnet.imageUrl.startsWith('img_')) continue; const result = await saveImageToLocal(fail.cardId, true, true); if (result) successCount++; else failCount++; await new Promise(r => setTimeout(r, 300)); } await saveToDB(); for (let i = failList.length-1; i >= 0; i--) { const magnet = magnets.find(m => m.id === failList[i].cardId); if (magnet && magnet.imageUrl && magnet.imageUrl.startsWith('img_')) failList.splice(i,1); } await saveFailListToDB(); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); showToast(`全部重试完成: ${successCount} 张成功, ${failCount} 张失败`); if (document.getElementById('failListModal').style.display === 'flex') showFailListModal(); }
+    async function deleteAllFailCards() { if (failList.length === 0) { showToast('没有失败卡片可删除'); return; } if (confirm(`确定要永久删除 ${failList.length} 张失败的卡片吗？`)) { const idsToDelete = failList.map(f => f.cardId); magnets = magnets.filter(m => !idsToDelete.includes(m.id)); for (const id of idsToDelete) if (selectedCardIds.has(id)) selectedCardIds.delete(id); failList = []; await saveToDB(); await saveFailListToDB(); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); showToast(`已删除 ${idsToDelete.length} 张失败卡片`); const modal = document.getElementById('failListModal'); if (modal.style.display === 'flex') { modal.style.display = 'none'; showFailListModal(); } } }
+    function copyFailMagnetLinks() { if (failList.length === 0) { showToast('没有失败项可复制'); return; } const magnetLinks = []; for (const fail of failList) { const magnet = magnets.find(m => m.id === fail.cardId); if (magnet && magnet.magnetLink) magnetLinks.push(magnet.magnetLink); } if (magnetLinks.length === 0) { showToast('未找到任何有效的磁力链接', true); return; } navigator.clipboard.writeText(magnetLinks.join('\n')).then(() => showToast(`已复制 ${magnetLinks.length} 个磁力链接`)).catch(() => showToast('复制失败', true)); }
+    async function batchSaveSelectedImages() {
+        if (selectedCardIds.size === 0) { showToast('请先选择卡片', true); return; }
+        const toProcess = [];
+        for (const id of selectedCardIds) {
+            const magnet = magnets.find(m => m.id === id);
+            if (magnet && magnet.imageUrl && !magnet.imageUrl.startsWith('img_') && (magnet.imageUrl.startsWith('http://') || magnet.imageUrl.startsWith('https://'))) toProcess.push(magnet);
+        }
+        if (toProcess.length === 0) { showToast('选中的卡片中没有需要转换的网络图片', false); return; }
+        let processed = 0, success = 0, failed = 0;
+        showProgressModal();
+        for (const magnet of toProcess) {
+            const result = await saveImageToLocal(magnet.id, true, true);
+            if (result) success++; else failed++;
+            processed++;
+            updateProgress(processed, toProcess.length, success, failed);
+            await new Promise(r => setTimeout(r, 200));
+        }
+        hideProgressModal();
+        showToast(`批量保存完成: ${success} 张成功, ${failed} 张失败`);
+        if (failed > 0) showFailListModal();
+        updateFilteredList();
+        currentLoadedCount = 0;
+        await renderLoadedCards();
+        updateStats(allFilteredMagnets.length, magnets.length);
+    }
+
+    // ========================== 自动标签规则 ==========================
+    function getAutoTagsForTitle(title) { if (!title) return []; const lowerTitle = title.toLowerCase(); const matched = new Set(); for (const rule of autoTagRules) if (lowerTitle.includes(rule.keyword.toLowerCase())) matched.add(rule.tagId); return Array.from(matched); }
+    function applyAutoTagsToMagnet(magnet) { if (!magnet.title) return; const autoIds = getAutoTagsForTitle(magnet.title); for (const tid of autoIds) if (!magnet.tagIds.includes(tid)) magnet.tagIds.push(tid); }
+    async function applyAutoTagsToAllMagnets() { let changed = 0; for (const m of magnets) { const before = m.tagIds.length; applyAutoTagsToMagnet(m); if (m.tagIds.length !== before) changed++; } if (changed > 0) { await saveToDB(); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); showToast(`已应用规则，为 ${changed} 个卡片添加了标签`); } else showToast('没有卡片需要添加标签'); }
+    function renderRulesList() { const container = document.getElementById('rulesListContainer'); if (!container) return; if (autoTagRules.length === 0) { container.innerHTML = '<div style="text-align:center;color:#64748b;">暂无规则，添加规则后标题包含关键词将自动添加标签</div>'; return; } container.innerHTML = autoTagRules.map((rule, idx) => { const tagObj = tags.find(t => t.id === rule.tagId); const tagName = tagObj ? tagObj.name : '未知标签'; return `<div class="rule-item" data-idx="${idx}"><span><span class="rule-keyword">${escapeHtml(rule.keyword)}</span> → <span class="rule-tag">${escapeHtml(tagName)}</span></span><div class="rule-actions"><button class="move-up" ${idx === 0 ? 'disabled' : ''}>▲ 上移</button><button class="move-down" ${idx === autoTagRules.length-1 ? 'disabled' : ''}>▼ 下移</button><button class="delete-rule">🗑️ 删除</button></div></div>`; }).join(''); container.querySelectorAll('.move-up').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.closest('.rule-item').dataset.idx); if (idx > 0) { [autoTagRules[idx-1], autoTagRules[idx]] = [autoTagRules[idx], autoTagRules[idx-1]]; await saveToDB(); renderRulesList(); } }; }); container.querySelectorAll('.move-down').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.closest('.rule-item').dataset.idx); if (idx < autoTagRules.length-1) { [autoTagRules[idx+1], autoTagRules[idx]] = [autoTagRules[idx], autoTagRules[idx+1]]; await saveToDB(); renderRulesList(); } }; }); container.querySelectorAll('.delete-rule').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.closest('.rule-item').dataset.idx); autoTagRules.splice(idx, 1); await saveToDB(); renderRulesList(); }; }); }
+    function refreshRuleTagSelect() { const select = document.getElementById('newRuleTagSelect'); if (!select) return; select.innerHTML = tags.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join(''); }
+    function openAutoTagRuleModal() { refreshRuleTagSelect(); renderRulesList(); document.getElementById('autoTagRuleModal').style.display = 'flex'; }
+    async function addRule() { const keyword = document.getElementById('newRuleKeyword').value.trim(); const tagId = parseInt(document.getElementById('newRuleTagSelect').value); if (!keyword) { alert('请输入关键词'); return; } if (!tagId) { alert('请选择标签'); return; } autoTagRules.push({ keyword, tagId }); await saveToDB(); document.getElementById('newRuleKeyword').value = ''; renderRulesList(); showToast('规则已添加'); }
+
+    // ========================== 标签拖拽排序 ==========================
+    function initTagDragSort() { const container = document.getElementById('draggableTagsList'); if (!container) return; container.querySelectorAll('.drag-tag').forEach(tag => { tag.setAttribute('draggable', 'true'); tag.ondragstart = (e) => { dragSrcIndex = parseInt(tag.getAttribute('data-index')); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'tag_sort', id: tag.getAttribute('data-id') })); e.dataTransfer.setDragImage(tag, 0, 0); tag.classList.add('dragging'); }; tag.ondragend = (e) => { tag.classList.remove('dragging'); dragSrcIndex = null; }; tag.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }; tag.ondrop = async (e) => { e.preventDefault(); const targetIndex = parseInt(tag.getAttribute('data-index')); if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) { const [movedTag] = tags.splice(dragSrcIndex, 1); tags.splice(targetIndex, 0, movedTag); updateTagOrderFromTags(); await saveToDB(); renderDraggable(); initTagDragSort(); showToast('标签顺序已更新'); } }; }); }
+    function renderDraggable() { const container = document.getElementById('draggableTagsList'); if (!container) return; container.innerHTML = ''; tags.forEach((tag, idx) => { const el = document.createElement('div'); el.className = 'drag-tag'; el.textContent = `# ${tag.name}`; el.setAttribute('data-id', tag.id); el.setAttribute('data-index', idx); el.setAttribute('draggable', 'true'); el.ondragstart = (e) => { dragSrcIndex = idx; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'tag_sort', id: tag.id })); e.dataTransfer.setDragImage(el, 0, 0); el.classList.add('dragging'); }; el.ondragend = (e) => { el.classList.remove('dragging'); dragSrcIndex = null; }; el.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }; el.ondrop = async (e) => { e.preventDefault(); const targetIndex = idx; if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) { const [movedTag] = tags.splice(dragSrcIndex, 1); tags.splice(targetIndex, 0, movedTag); updateTagOrderFromTags(); await saveToDB(); renderDraggable(); initTagDragSort(); showToast('标签顺序已更新'); } }; el.onclick = (e) => { e.stopPropagation(); filterByTag(tag.name); }; container.appendChild(el); }); initTagDragSort(); }
+    function renderTagManagementList() { const container = document.getElementById('tagList'); if (!container) return; if (tags.length === 0) { container.innerHTML = '<div style="text-align:center;color:#64748b;">暂无标签，请添加</div>'; return; } container.innerHTML = tags.map(t => `<div class="flex-between"><span>🏷️ ${escapeHtml(t.name)}</span><button class="icon-btn delete-tag-mgr" data-id="${t.id}">🗑️</button></div>`).join(''); container.querySelectorAll('.delete-tag-mgr').forEach(btn => { btn.onclick = async () => { const id = parseInt(btn.dataset.id); if (confirm('删除标签将从所有卡片中移除，确定？')) { tags = tags.filter(t => t.id !== id); magnets = magnets.map(m => ({ ...m, tagIds: m.tagIds.filter(tid => tid !== id) })); tagOrder = tagOrder.filter(tid => tid !== id); saveTagOrder(); await saveToDB(); renderDraggable(); renderTagManagementList(); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); refreshRuleTagSelect(); renderRulesList(); } }; }); }
+
+    // ========================== 重复清理 ==========================
+    let duplicateGroups = [];
+    function stringSimilarity(s1,s2) { if(!s1||!s2)return 0; if(s1===s2)return 1; s1=s1.trim().toLowerCase(); s2=s2.trim().toLowerCase(); const len1=s1.length,len2=s2.length; if(len1===0||len2===0)return 0; const set1=new Set(s1.split('')), set2=new Set(s2.split('')); const common=[...set1].filter(c=>set2.has(c)).length; const charSim=common*2/(set1.size+set2.size); const lengthRatio=Math.min(len1,len2)/Math.max(len1,len2); return (charSim+lengthRatio)/2; }
+    function findDuplicateGroups(mode, threshold=0.8) { if(mode==='magnet'){ const groups=new Map(); for(const m of magnets){ const key=m.magnetLink?m.magnetLink.toLowerCase():''; if(!key)continue; if(!groups.has(key)) groups.set(key,[]); groups.get(key).push(m); } const result=[]; for(const [key,items] of groups.entries()) if(items.length>1) result.push({key,items,selectedIndices:new Set(items.map((_,idx)=>idx))}); return result; } else { const used=new Set(), groups=[]; for(let i=0;i<magnets.length;i++){ if(used.has(i)) continue; const base=magnets[i]; const baseTitle=base.title?.trim().toLowerCase()||''; if(!baseTitle) continue; const group=[base]; used.add(i); for(let j=i+1;j<magnets.length;j++){ if(used.has(j)) continue; const other=magnets[j]; const otherTitle=other.title?.trim().toLowerCase()||''; if(!otherTitle) continue; if(stringSimilarity(baseTitle,otherTitle)>=threshold){ group.push(other); used.add(j); } } if(group.length>1) groups.push({key:baseTitle,items:group,selectedIndices:new Set(group.map((_,idx)=>idx))}); } return groups; } }
+    async function resolveSingleGroup(group,groupDiv){ const toDelete=[],keep=[]; for(let idx=0;idx<group.items.length;idx++){ if(group.selectedIndices.has(idx)) keep.push(group.items[idx].id); else toDelete.push(group.items[idx].id); } if(keep.length===0){ showToast(`错误：该重复组至少需要保留一个卡片`,true); return false; } if(toDelete.length===0){ showToast(`该组没有需要删除的卡片`,false); return false; } magnets=magnets.filter(m=>!toDelete.includes(m.id)); for(const id of toDelete) if(selectedCardIds.has(id)) selectedCardIds.delete(id); await saveToDB(); const mode=document.querySelector('input[name="dupMode"]:checked').value; const thres=mode==='title'?parseFloat(document.getElementById('similaritySlider').value)/100:0.8; const newGroups=findDuplicateGroups(mode,thres); duplicateGroups=newGroups; renderDuplicateModal(newGroups); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); showToast(`已删除 ${toDelete.length} 个卡片`); return true; }
+    function renderDuplicateModal(groups){ const container=document.getElementById('duplicateGroupsContainer'); if(!container) return; if(groups.length===0){ container.innerHTML='<div style="text-align:center;padding:2rem">未发现重复项</div>'; return; } container.innerHTML=''; groups.forEach((group,gidx)=>{ const groupDiv=document.createElement('div'); groupDiv.className='duplicate-group'; const header=document.createElement('h4'); header.innerHTML=`重复组 ${gidx+1} (${escapeHtml(group.key.substring(0,80))})`; const btnGroup=document.createElement('div'); btnGroup.className='group-header-actions'; const copyBtn=document.createElement('button'); copyBtn.textContent='📋 复制组内链接'; copyBtn.className='copy-group-links-btn'; copyBtn.onclick=()=>{ const links=group.items.map(i=>i.magnetLink).filter(l=>l); navigator.clipboard.writeText(links.join('\n')).then(()=>showToast(`已复制 ${links.length} 个磁力链接`)).catch(()=>alert('复制失败')); }; const selectAll=document.createElement('button'); selectAll.textContent='全选'; selectAll.className='group-select-all'; selectAll.onclick=()=>{ const cbs=groupDiv.querySelectorAll('.duplicate-item-checkbox'); const all=Array.from(cbs).every(cb=>cb.checked); cbs.forEach(cb=>cb.checked=!all); const newSet=new Set(); cbs.forEach((cb,idx)=>{if(cb.checked) newSet.add(idx);}); group.selectedIndices=newSet; }; const applyBtn=document.createElement('button'); applyBtn.textContent='删除其余 (本组)'; applyBtn.className='apply-group-btn'; applyBtn.onclick=async()=>{ await resolveSingleGroup(group,groupDiv); }; btnGroup.appendChild(copyBtn); btnGroup.appendChild(selectAll); btnGroup.appendChild(applyBtn); header.appendChild(btnGroup); groupDiv.appendChild(header); const itemsDiv=document.createElement('div'); group.items.forEach((item,idx)=>{ const itemDiv=document.createElement('div'); itemDiv.className='duplicate-item'; const cb=document.createElement('input'); cb.type='checkbox'; cb.className='duplicate-item-checkbox'; cb.checked=group.selectedIndices.has(idx); cb.addEventListener('change',()=>{ if(cb.checked) group.selectedIndices.add(idx); else group.selectedIndices.delete(idx); }); const info=document.createElement('div'); info.className='duplicate-info'; info.innerHTML=`<div class="duplicate-title">${escapeHtml(item.title)}</div><div class="duplicate-magnet">${escapeHtml(item.magnetLink.substring(0,60))}...</div><div>标签: ${item.tagIds.map(tid=>tags.find(t=>t.id===tid)?.name).filter(n=>n).join(', ')} | 评分: ${item.rating}</div>`; const merge=document.createElement('button'); merge.textContent='合并标签'; merge.className='merge-tags-btn'; merge.onclick=()=>{ const target=group.items[idx]; const others=group.items.filter((_,i)=>i!==idx); for(const other of others){ for(const tid of other.tagIds){ if(!target.tagIds.includes(tid)) target.tagIds.push(tid); } } renderDuplicateModal(groups); showToast(`已将其他卡片的标签合并到“${target.title.substring(0,30)}”`); }; const delOther=document.createElement('button'); delOther.textContent='删除其他'; delOther.className='delete-other-btn'; delOther.onclick=async()=>{ if(confirm(`确定要删除除“${item.title.substring(0,30)}”之外的其他重复卡片吗？`)){ const toDel=group.items.filter((_,i)=>i!==idx); const ids=toDel.map(c=>c.id); magnets=magnets.filter(m=>!ids.includes(m.id)); for(const id of ids) if(selectedCardIds.has(id)) selectedCardIds.delete(id); await saveToDB(); const mode=document.querySelector('input[name="dupMode"]:checked').value; const thres=mode==='title'?parseFloat(document.getElementById('similaritySlider').value)/100:0.8; const newGroups=findDuplicateGroups(mode,thres); duplicateGroups=newGroups; renderDuplicateModal(newGroups); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); showToast(`已删除 ${toDel.length} 个卡片`); } }; itemDiv.appendChild(cb); itemDiv.appendChild(info); itemDiv.appendChild(merge); itemDiv.appendChild(delOther); itemsDiv.appendChild(itemDiv); }); groupDiv.appendChild(itemsDiv); container.appendChild(groupDiv); }); }
+    async function resolveAllDuplicates(groups){ if(!groups||groups.length===0){ showToast('没有重复项需要清理'); return; } const toDel=new Set(); for(const group of groups){ const keep=new Set(); for(const idx of group.selectedIndices){ const item=group.items[idx]; if(item&&item.id) keep.add(item.id); } if(keep.size===0){ showToast(`错误：重复组 “${group.key.substring(0,40)}” 至少需要保留一个卡片`,true); return; } for(const item of group.items) if(!keep.has(item.id)) toDel.add(item.id); } if(toDel.size===0){ showToast('没有需要删除的卡片',false); return; } magnets=magnets.filter(m=>!toDel.has(m.id)); for(const id of toDel) if(selectedCardIds.has(id)) selectedCardIds.delete(id); await saveToDB(); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); showToast(`已删除 ${toDel.size} 个重复卡片`); }
+    function openDuplicateModal(){ const mode=document.querySelector('input[name="dupMode"]:checked').value; let thres=0.8; if(mode==='title'){ const slider=document.getElementById('similaritySlider'); if(slider) thres=parseFloat(slider.value)/100; document.getElementById('similarityControl').style.display='flex'; }else{ document.getElementById('similarityControl').style.display='none'; } const groups=findDuplicateGroups(mode,thres); duplicateGroups=groups; renderDuplicateModal(groups); document.getElementById('duplicateModal').style.display='flex'; }
+    function bindDuplicateModalEvents(){ const radios=document.querySelectorAll('input[name="dupMode"]'); radios.forEach(radio=>{ radio.addEventListener('change',()=>{ const newMode=document.querySelector('input[name="dupMode"]:checked').value; const slider=document.getElementById('similaritySlider'); if(newMode==='title'){ document.getElementById('similarityControl').style.display='flex'; const thres=slider?parseFloat(slider.value)/100:0.8; const groups=findDuplicateGroups('title',thres); duplicateGroups=groups; renderDuplicateModal(groups); }else{ document.getElementById('similarityControl').style.display='none'; const groups=findDuplicateGroups('magnet'); duplicateGroups=groups; renderDuplicateModal(groups); } }); }); const slider=document.getElementById('similaritySlider'); if(slider){ let timeout; slider.addEventListener('input',(e)=>{ document.getElementById('similarityValue').innerText=e.target.value+'%'; if(timeout) clearTimeout(timeout); timeout=setTimeout(()=>{ const val=parseFloat(slider.value)/100; const mode=document.querySelector('input[name="dupMode"]:checked').value; if(mode==='title'){ const groups=findDuplicateGroups('title',val); duplicateGroups=groups; renderDuplicateModal(groups); } },300); }); } document.getElementById('applyDuplicateResolutionBtn').onclick=()=>{ if(duplicateGroups&&duplicateGroups.length>0) resolveAllDuplicates(duplicateGroups); else showToast('没有重复项需要清理',true); document.getElementById('duplicateModal').style.display='none'; }; document.getElementById('cancelDuplicateBtn').onclick=()=>document.getElementById('duplicateModal').style.display='none'; document.getElementById('closeDuplicateModalBtn').onclick=()=>document.getElementById('duplicateModal').style.display='none'; }
+
+    // ========================== 批量复制相关 ==========================
+    function disableCardMagnetLinks(){ const links=document.querySelectorAll('.magnet-link'); originalHrefs=[]; links.forEach(link=>{ if(link.getAttribute('href')&&link.getAttribute('href').startsWith('magnet:')){ originalHrefs.push({link,href:link.getAttribute('href'),display:link.style.display}); link.removeAttribute('href'); link.style.display='none'; } }); }
+    function restoreCardMagnetLinks(){ originalHrefs.forEach(item=>{ item.link.setAttribute('href',item.href); item.link.style.display=item.display||''; item.link.style.cursor='pointer'; item.link.style.opacity=''; item.link.title=''; }); originalHrefs=[]; }
+    function batchCopyLinksWithModal(){ if(selectedCardIds.size===0){ alert('请先选择卡片'); return; } const links=[]; for(const id of selectedCardIds){ const m=magnets.find(m=>m.id===id); if(m&&m.magnetLink) links.push(m.magnetLink); } if(links.length===0){ alert('没有可复制的链接'); return; } disableCardMagnetLinks(); const container=document.getElementById('batchLinksContainer'); container.innerHTML=''; links.forEach(link=>{ const a=document.createElement('a'); a.href=link; a.className='batch-link-item'; a.textContent=link; a.title='点击调用 PikPak 扩展或系统处理程序'; container.appendChild(a); }); document.getElementById('batchCopyModal').style.display='flex'; }
+    function bindModalRestore(){ const modal=document.getElementById('batchCopyModal'); const closeBtn=document.getElementById('closeBatchCopyModalBtn'); const cancelBtn=document.getElementById('cancelBatchCopyBtn'); const restore=()=>{ modal.style.display='none'; restoreCardMagnetLinks(); }; closeBtn.onclick=restore; cancelBtn.onclick=restore; modal.addEventListener('click',(e)=>{if(e.target===modal) restore();}); }
+    function bindMagnetLinkEvents(){ document.querySelectorAll('.magnet-link').forEach(el=>{ if(el.hasAttribute('data-bound')) return; el.setAttribute('data-bound','true'); const url=el.getAttribute('href'); if(!url) return; el.addEventListener('click',(e)=>{ copyMagnetLink(url); }); }); }
+    function initHideImageButton(){ const btn=document.getElementById('hideImageBtn'); btn.addEventListener('click',()=>{ document.body.classList.toggle('hide-images'); const hidden=document.body.classList.contains('hide-images'); btn.innerHTML=hidden?'<i class="fas fa-eye"></i> 显示图片':'<i class="fas fa-image"></i> 隐藏图片'; }); }
+
+    // ========================== 评分筛选 ==========================
+    function updateRatingFilterUI(){ const stars=document.querySelectorAll('#ratingFilter i'); stars.forEach(star=>{ const r=parseInt(star.dataset.rating); if(currentRatingFilter>0&&r<=currentRatingFilter) star.className='fas fa-star active'; else star.className='far fa-star'; }); }
+    function setupRatingFilter(){ const stars=document.querySelectorAll('#ratingFilter i'); stars.forEach(star=>{ star.addEventListener('click',()=>{ const r=parseInt(star.dataset.rating); currentRatingFilter=(currentRatingFilter===r)?0:r; updateRatingFilterUI(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); }); document.getElementById('clearRatingFilter').addEventListener('click',()=>{ currentRatingFilter=0; updateRatingFilterUI(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); }
+
+    // ========================== 卡片渲染 ==========================
+    function updateFilteredList(){ const search=document.getElementById('searchInput').value.toLowerCase(); let filtered=magnets.filter(m=>{ if(search){ const titleMatch=m.title.toLowerCase().includes(search); const tagMatch=m.tagIds.some(tid=>tags.find(t=>t.id===tid)?.name.toLowerCase().includes(search)); if(!titleMatch&&!tagMatch) return false; } if(currentRatingFilter>0&&m.rating!==currentRatingFilter) return false; return true; }); filtered.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); allFilteredMagnets=filtered; }
+    async function renderLoadedCards(){ const container=document.getElementById('magnetGridContainer'); const loaded=allFilteredMagnets.slice(0,currentLoadedCount); if(loaded.length===0&&allFilteredMagnets.length>0){ currentLoadedCount=Math.min(pageSize,allFilteredMagnets.length); return renderLoadedCards(); } if(loaded.length===0){ container.innerHTML='<div style="text-align:center;padding:2rem">暂无磁力</div>'; document.getElementById('loadMoreTrigger').style.display='none'; return; } container.innerHTML=loaded.map(m=>{ let tagSpans=m.tagIds.map(tid=>tags.find(t=>t.id===tid)).filter(t=>t).map(t=>`<span class="tag">${escapeHtml(t.name)}</span>`).join(''); let stars=''; for(let i=1;i<=5;i++) stars+=`<i class="${i<=m.rating?'fas fa-star active':'far fa-star'}" data-rating="${i}"></i>`; const checked=selectedCardIds.has(m.id)?'checked':''; const shortLink=m.magnetLink.length>45?m.magnetLink.substring(0,45)+'...':m.magnetLink; const isLocal=m.imageUrl&&m.imageUrl.startsWith('img_'); const badge=isLocal?'<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>':(m.imageUrl?'<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>':''); return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\" viewBox=\"0 0 400 200\"%3E%3Crect width=\"400\" height=\"200\" fill=\"%23e2e8f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" font-family=\"Arial\" font-size=\"16\" fill=\"%23475569\" text-anchor=\"middle\" dy=\".3em\"%3ELoading...%3C/text%3E%3C/svg%3E')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`; }).join(''); if(selectionMode){ document.querySelectorAll('.card-checkbox').forEach(cb=>{ cb.addEventListener('change',(e)=>{ e.stopPropagation(); const id=parseInt(cb.dataset.id); if(cb.checked) selectedCardIds.add(id); else selectedCardIds.delete(id); updateSelectedCount(); }); }); } document.querySelectorAll('.star-rating').forEach(div=>{ const mid=parseInt(div.dataset.id); const m=magnets.find(m=>m.id===mid); if(!m) return; const stars=div.querySelectorAll('i'); stars.forEach((star,idx)=>{ star.addEventListener('click',(e)=>{ e.stopPropagation(); let newRating=idx+1; if(m.rating===newRating) newRating=0; if(m.rating!==newRating){ m.rating=newRating; saveToDB().then(()=>{ updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); } }); }); }); document.querySelectorAll('.copy-magnet').forEach(btn=>btn.addEventListener('click',(e)=>{ e.stopPropagation(); copyMagnetLink(btn.getAttribute('data-magnet')); })); document.querySelectorAll('.preview-img').forEach(div=>{ div.addEventListener('click',(e)=>{ e.stopPropagation(); const url=div.getAttribute('data-img-url'); if(url) showImagePreview(url); }); }); document.querySelectorAll('.save-image-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const id=parseInt(btn.getAttribute('data-id')); await saveImageToLocal(id,false); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }); }); bindMagnetLinkEvents(); for(const card of container.querySelectorAll('.magnet-card')){ const mid=parseInt(card.getAttribute('data-id')); const m=magnets.find(m=>m.id===mid); if(m){ const url=await getImageUrlForCard(m); const preview=card.querySelector('.preview-img'); if(preview){ preview.style.backgroundImage=`url(${url})`; preview.setAttribute('data-img-url',url); } } } const trigger=document.getElementById('loadMoreTrigger'); if(currentLoadedCount<allFilteredMagnets.length){ trigger.style.display='flex'; trigger.innerText='向下滚动加载更多...'; }else{ trigger.style.display='none'; } }
+
+    // ========================== 多选及界面控制 ==========================
+    function toggleSelectionMode(){ selectionMode=!selectionMode; const container=document.getElementById('magnetGridContainer'); const bar=document.getElementById('floatingBatchBar'); if(selectionMode){ container.classList.add('selection-mode'); if(selectedCardIds.size>0) bar.style.display='flex'; else bar.style.display='none'; lastSelectedCardId=null; }else{ container.classList.remove('selection-mode'); bar.style.display='none'; selectedCardIds.clear(); } renderLoadedCards(); }
+    function updateSelectedCount(){ const span=document.getElementById('selectedCount'); if(span) span.innerText=`已选择 ${selectedCardIds.size} 个卡片`; const btns=document.querySelectorAll('#batchAddTagsBtn, #batchCopyLinksBtn, #batchDeleteBtn, #batchSaveImagesBtn'); btns.forEach(btn=>btn.disabled=(selectedCardIds.size===0)); const bar=document.getElementById('floatingBatchBar'); if(selectionMode){ if(selectedCardIds.size>0) bar.style.display='flex'; else bar.style.display='none'; } }
+    function selectAllCurrent(){ const ids=allFilteredMagnets.slice(0,currentLoadedCount).map(m=>m.id); ids.forEach(id=>selectedCardIds.add(id)); renderLoadedCards(); updateSelectedCount(); showToast(`已选择当前视图中的 ${ids.length} 张卡片`); }
+    function selectAllFiltered(){ allFilteredMagnets.forEach(m=>selectedCardIds.add(m.id)); renderLoadedCards(); updateSelectedCount(); showToast(`已选择所有筛选结果中的 ${allFilteredMagnets.length} 张卡片`); }
+    async function batchDelete(){ if(selectedCardIds.size===0){ alert('请先选择卡片'); return; } if(confirm(`确定要永久删除选中的 ${selectedCardIds.size} 张卡片吗？`)){ const toDel=Array.from(selectedCardIds); magnets=magnets.filter(m=>!selectedCardIds.has(m.id)); selectedCardIds.clear(); await saveToDB(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); showToast(`已删除 ${toDel.length} 张卡片`); updateSelectedCount(); if(selectionMode) toggleSelectionMode(); } }
+    function openBatchAddTags(){ if(selectedCardIds.size===0){ alert('请先选择卡片'); return; } const container=document.getElementById('batchTagSelectorContainer'); container.innerHTML=''; tags.forEach(tag=>{ const span=document.createElement('span'); span.className='tag-option'; span.textContent=`# ${tag.name}`; span.dataset.id=tag.id; span.onclick=()=>{ span.classList.toggle('selected'); }; container.appendChild(span); }); document.getElementById('batchTagModal').style.display='flex'; }
+    async function confirmBatchAddTags(){ const selected=Array.from(document.querySelectorAll('#batchTagSelectorContainer .tag-option.selected')).map(span=>parseInt(span.dataset.id)); if(selected.length===0){ alert('请至少选择一个标签'); return; } for(const id of selectedCardIds){ const m=magnets.find(m=>m.id===id); if(m){ for(const tid of selected){ if(!m.tagIds.includes(tid)) m.tagIds.push(tid); } } } await saveToDB(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); showToast(`已为 ${selectedCardIds.size} 个卡片添加所选标签`); document.getElementById('batchTagModal').style.display='none'; updateSelectedCount(); }
+    function cancelSelection(){ if(selectionMode) toggleSelectionMode(); }
+    function loadMoreIfNeeded(){ if(isLoadingMore) return; if(currentLoadedCount<allFilteredMagnets.length){ isLoadingMore=true; const newCount=Math.min(currentLoadedCount+pageSize,allFilteredMagnets.length); currentLoadedCount=newCount; renderLoadedCards(); isLoadingMore=false; } }
+    function setupInfiniteScroll(){ if(scrollListener) window.removeEventListener('scroll',scrollListener); scrollListener=()=>{ const scrollTop=window.scrollY||document.documentElement.scrollTop; const winHeight=window.innerHeight; const docHeight=document.documentElement.scrollHeight; if(scrollTop+winHeight>=docHeight-200) loadMoreIfNeeded(); }; window.addEventListener('scroll',scrollListener); }
+    function bindDelegatedEvents(){ const container=document.getElementById('magnetGridContainer'); container.onclick=(e)=>{ const del=e.target.closest('.delete-magnet'); if(del){ const id=parseInt(del.getAttribute('data-id')); if(confirm('永久删除此磁力？')){ magnets=magnets.filter(m=>m.id!==id); if(selectedCardIds.has(id)) selectedCardIds.delete(id); saveToDB().then(()=>{ updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); } return; } const edit=e.target.closest('.edit-magnet'); if(edit){ const id=parseInt(edit.getAttribute('data-id')); openEditMagnet(id); return; } }; }
+    function attachCardClickHandler(){ const container=document.getElementById('magnetGridContainer'); if(!container) return; container.addEventListener('click',(e)=>{ const card=e.target.closest('.magnet-card'); if(!card) return; const isInteractive=e.target.closest('.card-actions, .magnet-link, .star-rating i, .preview-img, .card-checkbox'); if(isInteractive) return; if(!selectionMode) toggleSelectionMode(); const cb=card.querySelector('.card-checkbox'); if(cb){ const id=parseInt(card.getAttribute('data-id')); if(cb.checked) selectedCardIds.delete(id); else selectedCardIds.add(id); cb.checked=!cb.checked; lastSelectedCardId=id; updateSelectedCount(); renderLoadedCards(); } }); }
+    function setupShiftSelection(){ const container=document.getElementById('magnetGridContainer'); if(!container) return; container.addEventListener('click',(e)=>{ if(!selectionMode) return; const cb=e.target.closest('.card-checkbox'); if(cb){ const card=cb.closest('.magnet-card'); if(card){ const id=parseInt(card.getAttribute('data-id')); if(e.shiftKey&&lastSelectedCardId!==null&&lastSelectedCardId!==id){ const allCards=Array.from(document.querySelectorAll('.magnet-card')); const idsOrder=allCards.map(c=>parseInt(c.getAttribute('data-id'))).filter(i=>!isNaN(i)); const idxA=idsOrder.indexOf(lastSelectedCardId); const idxB=idsOrder.indexOf(id); if(idxA!==-1&&idxB!==-1){ const start=Math.min(idxA,idxB); const end=Math.max(idxA,idxB); const toSelect=idsOrder.slice(start,end+1); if(!e.ctrlKey) selectedCardIds.clear(); toSelect.forEach(i=>selectedCardIds.add(i)); renderLoadedCards(); updateSelectedCount(); showToast(`已选择 ${selectedCardIds.size} 张卡片`); } } lastSelectedCardId=id; } } }); document.addEventListener('click',(e)=>{ if(!selectionMode) return; if(!e.target.closest('.magnet-card')) lastSelectedCardId=null; }); }
+
+    // ========================== 导入导出相关 ==========================
+    async function importFromClipboard() { try { const text = await navigator.clipboard.readText(); let parsed; try { parsed = JSON.parse(text); } catch(e) { const fixed = autoFixJsonArray(text); parsed = JSON.parse(fixed); } let items = Array.isArray(parsed) ? parsed : [parsed]; if (items.length === 0) { alert('剪贴板中没有有效数据'); return; } const validItems = items.filter(item => (item.title || item.name) && (item.magnetLink || item.magnet)); if (validItems.length === 0) { alert('未找到有效的磁力链接数据（需要 title 和 magnetLink 字段）'); return; } const newMagnets = []; for (const src of validItems) { const title = src.title || src.name || ''; const magnetLink = src.magnetLink || src.magnet || ''; let imageUrl = src.imageUrl || src.image || ''; const size = src.size || ''; if (magnets.some(m => m.magnetLink.toLowerCase() === magnetLink.toLowerCase())) continue; let finalImageUrl = imageUrl; if (imageUrl && !imageUrl.startsWith('img_') && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) { try { const response = await fetch(imageUrl); if (response.ok) { const blob = await response.blob(); const newId = await storeImageBlob(imageUrl, blob); if (newId) finalImageUrl = newId; } } catch(err) {} } const cleanedTitle = cleanTitle(title); const newMagnet = { id: nextMagnetId++, magnetLink: magnetLink, title: cleanedTitle, imageUrl: finalImageUrl, size: size, tagIds: [], rating: 0, createdAt: Date.now() }; newMagnets.push(newMagnet); } if (newMagnets.length === 0) { alert('没有新的磁力链接（可能均已存在）'); return; } await resolveImportDuplicates(newMagnets); } catch(e) { alert('❌ 解析剪贴板失败，请确保复制的 JSON 格式正确。\n错误信息：' + e.message); } }
+    async function resolveImportDuplicates(newItems) { for (const item of newItems) { applyAutoTagsToMagnet(item); magnets.push(item); } await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); return { resolved: true, addedCount: newItems.length }; }
+    function autoFixJsonArray(text) { let cleaned = text.trim(); if (!cleaned.startsWith('[')) cleaned = '[' + cleaned; if (!cleaned.endsWith(']')) cleaned = cleaned + ']'; cleaned = cleaned.replace(/\}\s*\{/g, '},{'); if (cleaned.includes(']{')) { let parts = cleaned.split(/\]/); let firstPart = parts[0] + ']'; let rest = parts.slice(1).join(''); rest = rest.replace(/^\s*\{/, '{'); cleaned = firstPart + ',' + rest; cleaned = cleaned.replace(/\}\s*\{/g, '},{'); } if (cleaned.startsWith('[[') && cleaned.endsWith(']]')) cleaned = cleaned.slice(1, -1); return cleaned; }
+    function openAddMagnet() { document.getElementById('magnetId').value = ''; document.getElementById('magnetLink').value = ''; document.getElementById('magnetTitle').value = ''; document.getElementById('fileSize').value = ''; document.getElementById('imageUrl').value = ''; document.getElementById('uploadStatus').innerHTML = ''; renderTagSelector([]); document.getElementById('modalTitle').innerText = "新建磁力"; document.getElementById('magnetModal').style.display = 'flex'; }
+    function openEditMagnet(id) { let m = magnets.find(m=>m.id===id); if(!m) return; document.getElementById('magnetId').value = id; document.getElementById('magnetLink').value = m.magnetLink; document.getElementById('magnetTitle').value = m.title; document.getElementById('fileSize').value = m.size || ''; document.getElementById('imageUrl').value = m.imageUrl || ''; document.getElementById('uploadStatus').innerHTML = ''; renderTagSelector(m.tagIds); document.getElementById('modalTitle').innerText = "编辑磁力"; document.getElementById('magnetModal').style.display = 'flex'; }
+    document.getElementById('magnetForm').addEventListener('submit', async (e) => { e.preventDefault(); let id = parseInt(document.getElementById('magnetId').value) || Date.now(); let magnetLink = document.getElementById('magnetLink').value.trim(); let title = document.getElementById('magnetTitle').value.trim(); let size = document.getElementById('fileSize').value.trim(); let imageUrl = document.getElementById('imageUrl').value.trim() || 'https://placehold.co/400x200/e2e8f0/475569?text=preview'; let holder = document.getElementById('selectedTagIdsHolder'); let tagIds = holder ? JSON.parse(holder.value) : []; if(!magnetLink || !title) { alert('磁力链接和标题必填'); return; } let existing = magnets.find(m=>m.id===id); const cleanedTitle = cleanTitle(title); let finalImageUrl = imageUrl; if (imageUrl && !imageUrl.startsWith('img_') && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) { try { const response = await fetch(imageUrl); if (response.ok) { const blob = await response.blob(); const newId = await storeImageBlob(imageUrl, blob); if (newId) finalImageUrl = newId; } } catch(err) {} } if(existing) { existing.magnetLink = magnetLink; existing.title = cleanedTitle; existing.size = size; existing.imageUrl = finalImageUrl; existing.tagIds = tagIds; applyAutoTagsToMagnet(existing); } else { let newMagnet = { id, magnetLink, title: cleanedTitle, size, imageUrl: finalImageUrl, tagIds, rating: 0, createdAt: Date.now() }; applyAutoTagsToMagnet(newMagnet); magnets.push(newMagnet); if (id >= nextMagnetId) nextMagnetId = id + 1; } await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); document.getElementById('magnetModal').style.display = 'none'; });
+    function renderAll(){ updateFilteredList(); currentLoadedCount = Math.min(pageSize, allFilteredMagnets.length); renderLoadedCards(); renderDraggable(); renderTagManagementList(); updateRatingFilterUI(); updateGridColumns(); setupInfiniteScroll(); }
+    async function batchCleanTitles() { let changed = 0; for (const m of magnets) { const originalTitle = m.title; const newTitle = cleanTitle(originalTitle); if (newTitle !== originalTitle) { m.title = newTitle; changed++; } } if (changed > 0) { await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); showToast(`已清理 ${changed} 个卡片的标题`); } else { showToast('没有卡片需要清理'); } }
+    function renderFilterWordsList() { const container = document.getElementById('filterWordsList'); if (!container) return; if (filterWords.length === 0) { container.innerHTML = '<div style="text-align:center;color:#64748b;">暂无过滤词，添加后导入或批量清理时自动删除</div>'; return; } container.innerHTML = ''; filterWords.forEach((word, idx) => { const div = document.createElement('div'); div.className = 'word-item'; div.innerHTML = `<span>${escapeHtml(word)}</span><button class="delete-word-btn" data-idx="${idx}">删除</button>`; container.appendChild(div); }); container.querySelectorAll('.delete-word-btn').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.getAttribute('data-idx')); if (!isNaN(idx)) { filterWords.splice(idx, 1); await saveFilterWordsToDB(); renderFilterWordsList(); showToast('已删除过滤词'); } }; }); }
+    async function addFilterWord() { const input = document.getElementById('newFilterWord'); const word = input.value.trim(); if (!word) { alert('请输入要删除的文字'); return; } if (filterWords.includes(word)) { alert('该词条已存在'); return; } filterWords.push(word); await saveFilterWordsToDB(); renderFilterWordsList(); input.value = ''; showToast('已添加过滤词'); }
+    function openFilterWordsModal() { renderFilterWordsList(); document.getElementById('filterWordsModal').style.display = 'flex'; }
+    function renderTagSelector(selectedIds = []) { const container = document.getElementById('tagSelectorContainer'); if(!container) return; if(tags.length === 0) { container.innerHTML = '暂无标签'; return; } container.innerHTML = tags.map(t => `<span class="tag-option ${selectedIds.includes(t.id) ? 'selected' : ''}" data-id="${t.id}"># ${escapeHtml(t.name)}</span>`).join(''); const options = container.querySelectorAll('.tag-option'); options.forEach(opt => { opt.onclick = () => { const tid = parseInt(opt.dataset.id); let current = getSelectedTagIds(); if(current.includes(tid)) current = current.filter(id=>id!==tid); else current.push(tid); updateSelectedTags(current); options.forEach(o => { const oid = parseInt(o.dataset.id); if(current.includes(oid)) o.classList.add('selected'); else o.classList.remove('selected'); }); }; }); function getSelectedTagIds() { const holder = document.getElementById('selectedTagIdsHolder'); return holder && holder.value ? JSON.parse(holder.value) : []; } function updateSelectedTags(ids) { let holder = document.getElementById('selectedTagIdsHolder'); if(!holder) { holder = document.createElement('input'); holder.type='hidden'; holder.id='selectedTagIdsHolder'; document.getElementById('magnetForm').appendChild(holder); } holder.value = JSON.stringify(ids); } if(!document.getElementById('selectedTagIdsHolder')) { const inp = document.createElement('input'); inp.type='hidden'; inp.id='selectedTagIdsHolder'; inp.value=JSON.stringify(selectedIds); document.getElementById('magnetForm').appendChild(inp); } else { document.getElementById('selectedTagIdsHolder').value = JSON.stringify(selectedIds); updateSelectedTags(selectedIds); options.forEach(o => { const oid = parseInt(o.dataset.id); if(selectedIds.includes(oid)) o.classList.add('selected'); else o.classList.remove('selected'); }); } }
+    function exportSingleFile() { const exportObj = { version: "3.0", tags: tags, magnets: magnets, autoTagRules: autoTagRules, tagOrder: tagOrder, filterWords: filterWords }; const dataStr = JSON.stringify(exportObj, null, 2); const blob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `magnet_full_backup_${new Date().toISOString().slice(0,19)}.json`; a.click(); URL.revokeObjectURL(url); showToast('已导出完整备份（包含标签、卡片、自动规则、过滤词，不含图片二进制）'); }
+    async function importSingleFile() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = async (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (ev) => { try { const data = JSON.parse(ev.target.result); if (data.tags && data.magnets) { tags = data.tags; magnets = data.magnets; if (data.autoTagRules) autoTagRules = data.autoTagRules; else showToast('导入的备份不包含自动标签规则，已保留当前规则'); if (data.filterWords && Array.isArray(data.filterWords)) filterWords = data.filterWords; else showToast('导入的备份不包含过滤词，已保留当前词条'); if (data.tagOrder && Array.isArray(data.tagOrder)) { tagOrder = data.tagOrder; } else { tagOrder = tags.map(t => t.id); } sortTagsByOrder(); nextTagId = Math.max(...tags.map(t=>t.id), 0) + 1; nextMagnetId = Math.max(...magnets.map(m=>m.id), 0) + 1; await saveToDB(); await saveFilterWordsToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); renderDraggable(); renderTagManagementList(); renderRulesList(); refreshRuleTagSelect(); renderFilterWordsList(); showToast(`导入成功！共 ${magnets.length} 张卡片，${tags.length} 个标签，${autoTagRules.length} 条自动规则，${filterWords.length} 个过滤词。`); } else { alert('文件格式不正确，缺少 tags 或 magnets 字段'); } } catch (err) { alert('解析失败：' + err.message); } }; reader.readAsText(file); }; input.click(); }
+    async function resetAllData() { if (confirm('⚠️ 重置将删除所有数据，不可恢复！')) { tags = [{ id: 1, name: "4K" }, { id: 2, name: "HDR" }, { id: 3, name: "蓝光原盘" }]; tagOrder = [1, 2, 3]; saveTagOrder(); magnets = [ { id: Date.now() - 100000, magnetLink: "magnet:?xt=urn:btih:aaa", title: "奥本海默 2023", imageUrl: "https://picsum.photos/id/111/400/200", size: "1.2 GB", tagIds: [1,2], rating: 5, createdAt: Date.now() - 100000 }, { id: Date.now() - 50000, magnetLink: "magnet:?xt=urn:btih:bbb", title: "最后生还者 第一季", imageUrl: "https://picsum.photos/id/119/400/200", size: "3.5 GB", tagIds: [2,3], rating: 4, createdAt: Date.now() - 50000 } ]; autoTagRules = []; filterWords = []; failList = []; nextTagId = 4; nextMagnetId = 3; currentRatingFilter = 0; selectionMode = false; selectedCardIds.clear(); await saveToDB(); await saveFilterWordsToDB(); await saveFailListToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); renderTagManagementList(); updateRatingFilterUI(); renderFilterWordsList(); alert('数据已重置'); } }
+    function saveToFolder() { const download = (content, filename) => { const blob = new Blob([content], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url); }; download(JSON.stringify(tags, null, 2), 'tags.json'); setTimeout(() => download(JSON.stringify(magnets, null, 2), 'magnets.json'), 100); alert('已生成 tags.json 和 magnets.json，自动标签规则和过滤词未包含，如需完整备份请使用“导出数据(单文件)”'); }
+    async function loadFromFolder() { const input = document.createElement('input'); input.type = 'file'; input.webkitdirectory = true; input.directory = true; input.multiple = true; input.onchange = async (e) => { const files = Array.from(e.target.files); const tagsFile = files.find(f => f.name === 'tags.json'); const magsFile = files.find(f => f.name === 'magnets.json'); if (!tagsFile || !magsFile) { alert('缺少 tags.json 或 magnets.json'); return; } try { const newTags = JSON.parse(await tagsFile.text()); const newMags = JSON.parse(await magsFile.text()); tags = newTags; magnets = newMags; tagOrder = tags.map(t => t.id); sortTagsByOrder(); nextTagId = Math.max(...tags.map(t=>t.id), 0) + 1; nextMagnetId = Math.max(...magnets.map(m=>m.id), 0) + 1; await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); renderDraggable(); renderTagManagementList(); renderRulesList(); refreshRuleTagSelect(); alert('从 data 文件夹加载成功（自动标签规则和过滤词未恢复，请单独导入规则）'); } catch (err) { alert('解析失败：' + err.message); } }; input.click(); }
+    async function fullBackupWithImages() { if (typeof JSZip === 'undefined') { alert('JSZip库未加载，请刷新页面重试'); return; } const zip = new JSZip(); const dataJson = { tags, magnets, autoTagRules, filterWords, tagOrder, version: "3.2" }; zip.file("data.json", JSON.stringify(dataJson, null, 2)); const images = await new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readonly'); const store = tx.objectStore(STORES.images); const req = store.getAll(); req.onsuccess = () => resolve(req.result); req.onerror = (e) => reject(e.target.error); }); const imgFolder = zip.folder("images"); for (const img of images) { const blob = img.blob; const ext = blob.type.split('/')[1] || 'bin'; const filename = img.id + '.' + (ext === 'jpeg' ? 'jpg' : ext); imgFolder.file(filename, blob); } const content = await zip.generateAsync({ type: "blob" }); const url = URL.createObjectURL(content); const a = document.createElement('a'); a.href = url; a.download = `magnet_fullbackup_${new Date().toISOString().slice(0,19)}.zip`; a.click(); URL.revokeObjectURL(url); showToast(`已导出完整备份，包含 ${images.length} 张图片`); }
+    async function restoreImagesFromFolder() { const input = document.createElement('input'); input.type = 'file'; input.webkitdirectory = true; input.directory = true; input.multiple = true; input.onchange = async (e) => { const files = Array.from(e.target.files); const imageFiles = files.filter(file => { const ext = file.name.split('.').pop().toLowerCase(); return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(ext); }); if (imageFiles.length === 0) { showToast('未找到图片文件', true); return; } const clearTx = db.transaction([STORES.images], 'readwrite'); const clearStore = clearTx.objectStore(STORES.images); await new Promise((resolve, reject) => { const clearReq = clearStore.clear(); clearReq.onsuccess = resolve; clearReq.onerror = (err) => reject(err); }); imageBlobCache.clear(); let successCount = 0; let failCount = 0; showProgressModal(); updateProgress(0, imageFiles.length, 0, 0); for (let i = 0; i < imageFiles.length; i++) { const file = imageFiles[i]; try { let id = file.name; const lastDot = id.lastIndexOf('.'); if (lastDot !== -1) id = id.substring(0, lastDot); const blob = await file.arrayBuffer().then(buf => new Blob([buf], {type: file.type})); await new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readwrite'); const store = tx.objectStore(STORES.images); const req = store.put({ id: id, blob: blob, url: '', timestamp: Date.now() }); req.onsuccess = resolve; req.onerror = (err) => reject(err); tx.oncomplete = resolve; }); successCount++; } catch (err) { console.error(`导入图片 ${file.name} 失败:`, err); failCount++; } updateProgress(i + 1, imageFiles.length, successCount, failCount); await new Promise(r => setTimeout(r, 10)); } hideProgressModal(); showToast(`已导入 ${successCount} 张图片，失败 ${failCount} 张`, failCount > 0); let fixedCount = 0; for (const magnet of magnets) { if (magnet.imageUrl && magnet.imageUrl.startsWith('img_')) { let pureId = magnet.imageUrl; if (pureId.includes('.')) { pureId = pureId.split('.')[0]; magnet.imageUrl = pureId; fixedCount++; } } } if (fixedCount > 0) { await saveToDB(); showToast(`自动修复了 ${fixedCount} 个卡片的图片引用`, false); } updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }; input.click(); }
+    async function fullRestoreWithImages() { if (typeof JSZip === 'undefined') { alert('JSZip库未加载，请刷新页面重试'); return; } const input = document.createElement('input'); input.type = 'file'; input.accept = '.zip'; input.onchange = async (e) => { const file = e.target.files[0]; if (!file) return; try { const zip = await JSZip.loadAsync(file); const dataFile = zip.file("data.json"); if (!dataFile) throw new Error("备份文件中缺少 data.json"); const dataJson = JSON.parse(await dataFile.async("string")); tags = dataJson.tags || []; magnets = dataJson.magnets || []; autoTagRules = dataJson.autoTagRules || []; filterWords = dataJson.filterWords || []; tagOrder = dataJson.tagOrder || tags.map(t => t.id); sortTagsByOrder(); nextTagId = tags.length ? Math.max(...tags.map(t=>t.id),0)+1 : 4; nextMagnetId = magnets.length ? Math.max(...magnets.map(m=>m.id),0)+1 : 1; const clearTx = db.transaction([STORES.images], 'readwrite'); const clearStore = clearTx.objectStore(STORES.images); await new Promise((resolve, reject) => { const clearReq = clearStore.clear(); clearReq.onsuccess = resolve; clearReq.onerror = (err) => reject(err); }); imageBlobCache.clear(); const imgFolder = zip.folder("images"); const imageMap = new Map(); if (imgFolder) { const promises = []; imgFolder.forEach((relativePath, file) => { promises.push((async () => { const name = file.name; const ext = name.split('.').pop().toLowerCase(); if (['jpg','jpeg','png','webp','gif','bmp'].includes(ext)) { const blob = await file.async("blob"); let id = name; const lastDot = id.lastIndexOf('.'); if (lastDot !== -1) id = id.substring(0, lastDot); imageMap.set(id, blob); } })()); }); await Promise.all(promises); } let storePromises = []; for (const [id, blob] of imageMap.entries()) { const p = new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readwrite'); const store = tx.objectStore(STORES.images); const req = store.put({ id: id, blob: blob, url: '', timestamp: Date.now() }); req.onsuccess = () => resolve(); req.onerror = (err) => reject(err); tx.oncomplete = () => resolve(); }); storePromises.push(p); } await Promise.all(storePromises); showToast(`已存储 ${imageMap.size} 张图片`, false); let fixedCount = 0; for (const magnet of magnets) { if (magnet.imageUrl && magnet.imageUrl.startsWith('img_')) { let pureId = magnet.imageUrl; if (pureId.includes('.')) { pureId = pureId.split('.')[0]; magnet.imageUrl = pureId; fixedCount++; } } } if (fixedCount > 0) showToast(`自动修复了 ${fixedCount} 个卡片的图片引用`, false); await saveToDB(); await saveFilterWordsToDB(); failList = []; await saveFailListToDB(); await new Promise(r => setTimeout(r, 300)); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); renderDraggable(); renderTagManagementList(); renderRulesList(); refreshRuleTagSelect(); renderFilterWordsList(); showToast(`完整恢复成功！共 ${magnets.length} 张卡片，${tags.length} 个标签，${imageMap.size} 张图片。`); } catch(err) { alert('恢复失败：' + err.message); console.error(err); } }; input.click(); }
+
+    function migrateOldRulesFromLocalStorage() { const oldKeys = ['magnet_manager_auto_tag_rules_v14','magnet_manager_auto_tag_rules_v13','magnet_manager_auto_tag_rules_v12','magnet_manager_auto_tag_rules_v11','magnet_manager_auto_tag_rules_v10','magnet_manager_auto_tag_rules_v9','magnet_manager_auto_tag_rules_v8','magnet_manager_auto_tag_rules_v7','magnet_manager_auto_tag_rules_v6','magnet_manager_auto_tag_rules_v5','magnet_manager_auto_tag_rules_v4','magnet_manager_auto_tag_rules_v3','magnet_manager_auto_tag_rules_v2','magnet_manager_auto_tag_rules_v1','magnet_manager_auto_tag_rules']; for (const key of oldKeys) { const old = localStorage.getItem(key); if (old) { try { const parsed = JSON.parse(old); if (Array.isArray(parsed) && parsed.length > 0) { autoTagRules = parsed; saveToDB().catch(console.error); showToast(`已自动迁移 ${autoTagRules.length} 条自动标签规则`); return; } } catch(e) {} } } }
+    function initTheme() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark') { document.body.classList.add('dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } else { document.body.classList.remove('dark'); document.getElementById('themeToggleBtn').textContent = '🌙'; } }
+    function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
+    function bindButtons() {
+        // 菜单按钮
+        document.getElementById('menuAddMagnet').onclick = openAddMagnet;
+        document.getElementById('menuImportClipboard').onclick = importFromClipboard;
+        document.getElementById('menuOpenTag').onclick = () => { renderTagManagementList(); document.getElementById('tagModal').style.display = 'flex'; };
+        document.getElementById('menuOpenAutoTagRule').onclick = openAutoTagRuleModal;
+        document.getElementById('menuApplyRulesToAll').onclick = applyAutoTagsToAllMagnets;
+        document.getElementById('menuFindDuplicates').onclick = openDuplicateModal;
+        document.getElementById('menuManageFilterWords').onclick = openFilterWordsModal;
+        document.getElementById('menuBatchCleanTitles').onclick = batchCleanTitles;
+        document.getElementById('menuConvertAllImagesToLocal').onclick = convertAllImagesToLocal;
+        document.getElementById('menuViewFailList').onclick = () => showFailListModal();
+        document.getElementById('menuFullBackupWithImages').onclick = fullBackupWithImages;
+        document.getElementById('menuFullRestoreWithImages').onclick = fullRestoreWithImages;
+        document.getElementById('menuRestoreImagesFromFolder').onclick = restoreImagesFromFolder;
+        document.getElementById('menuExportData').onclick = exportSingleFile;
+        document.getElementById('menuImportData').onclick = importSingleFile;
+        document.getElementById('menuSaveToFolder').onclick = saveToFolder;
+        document.getElementById('menuLoadFromFolder').onclick = loadFromFolder;
+        document.getElementById('menuResetData').onclick = resetAllData;
+        document.getElementById('topAddMagnetBtn').onclick = openAddMagnet;
+        document.getElementById('topImportClipboardBtn').onclick = importFromClipboard;
+        document.getElementById('floatImportBtn').onclick = importFromClipboard;
+        document.getElementById('closeModalBtn').onclick = () => document.getElementById('magnetModal').style.display = 'none';
+        document.getElementById('closeTagModalBtn').onclick = () => document.getElementById('tagModal').style.display = 'none';
+        document.getElementById('closeRuleModalBtn').onclick = () => document.getElementById('autoTagRuleModal').style.display = 'none';
+        document.getElementById('closeBatchTagModalBtn').onclick = () => document.getElementById('batchTagModal').style.display = 'none';
+        document.getElementById('cancelBatchTagsBtn').onclick = () => document.getElementById('batchTagModal').style.display = 'none';
+        document.getElementById('confirmBatchTagsBtn').onclick = confirmBatchAddTags;
+        document.getElementById('addTagBtn').onclick = async () => { let name = document.getElementById('newTagName').value.trim(); if(name) { const newId = nextTagId++; tags.push({ id: newId, name }); tagOrder.push(newId); saveTagOrder(); await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); document.getElementById('newTagName').value = ''; refreshRuleTagSelect(); renderRulesList(); renderDraggable(); renderTagManagementList(); } };
+        document.getElementById('addRuleBtn').onclick = addRule;
+        document.getElementById('resetFilterBtn').onclick = () => { document.getElementById('searchInput').value = ''; updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); };
+        document.getElementById('toggleSidebarBtn').onclick = () => document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('columnsSelect').addEventListener('change', updateGridColumns);
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => { pageSize = parseInt(e.target.value); currentLoadedCount = 0; renderLoadedCards(); });
+        document.getElementById('batchAddTagsBtn').onclick = openBatchAddTags;
+        document.getElementById('batchCopyLinksBtn').onclick = batchCopyLinksWithModal;
+        document.getElementById('batchSaveImagesBtn').onclick = batchSaveSelectedImages;
+        document.getElementById('batchDeleteBtn').onclick = batchDelete;
+        document.getElementById('selectAllCurrentBtn').onclick = selectAllCurrent;
+        document.getElementById('selectAllFilteredBtn').onclick = selectAllFiltered;
+        document.getElementById('cancelSelectionBtn').onclick = cancelSelection;
+        document.getElementById('searchInput').addEventListener('input', () => { selectedCardIds.clear(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); if (selectionMode) updateSelectedCount(); });
+        document.getElementById('copyAllBatchLinksBtn').onclick = () => { const links = Array.from(document.querySelectorAll('#batchLinksContainer .batch-link-item')).map(a => a.textContent); if (links.length === 0) return; navigator.clipboard.writeText(links.join('\n')).then(() => showToast(`已复制 ${links.length} 个链接到剪贴板`, false)).catch(() => alert('复制失败')); };
+        bindModalRestore();
+        initHideImageButton();
+        document.getElementById('closeFilterWordsModalBtn').onclick = () => document.getElementById('filterWordsModal').style.display = 'none';
+        document.getElementById('addFilterWordBtn').onclick = addFilterWord;
+        document.getElementById('newFilterWord').addEventListener('keypress', (e) => { if (e.key === 'Enter') addFilterWord(); });
+        document.getElementById('closeFailModalBtn').onclick = () => document.getElementById('failListModal').style.display = 'none';
+        document.getElementById('closeFailModalBtn2').onclick = () => document.getElementById('failListModal').style.display = 'none';
+        document.getElementById('copyFailListBtn').onclick = copyFailMagnetLinks;
+        document.getElementById('retryAllFailBtn').onclick = retryAllFailures;
+        document.getElementById('deleteAllFailCardsBtn').onclick = deleteAllFailCards;
+        document.getElementById('closeProgressBtn').onclick = () => hideProgressModal();
+
+        // ===== 上传图片（本地文件） =====
+        document.getElementById('uploadImageBtn').addEventListener('click', () => {
+            document.getElementById('imageFileInput').click();
+        });
+        document.getElementById('imageFileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.innerHTML = '⏳ 正在存储图片到本地...';
+            try {
+                const blob = await file.arrayBuffer().then(buf => new Blob([buf], { type: file.type }));
+                const imageId = await storeImageBlob(file.name, blob);
+                if (imageId) {
+                    document.getElementById('imageUrl').value = imageId;
+                    statusDiv.innerHTML = `✅ 已存储，ID：${imageId}`;
+                    statusDiv.style.color = '#10b981';
+                    showToast('✅ 图片已上传到本地存储');
+                } else throw new Error('存储失败');
+            } catch (err) {
+                statusDiv.innerHTML = `❌ 上传失败：${err.message}`;
+                statusDiv.style.color = '#ef4444';
+            }
+            e.target.value = '';
+        });
+
+        // 检测扩展是否安装
+        setTimeout(() => {
+            if (window.__MAGNET_HELPER_EXTENSION__) {
+                console.log('✅ 磁力管理器图片助手扩展已安装');
+                showToast('✅ 图片助手扩展已启用，可自动下载CORS受限图片');
+            } else {
+                console.log('ℹ️ 未检测到图片助手扩展，部分图片可能无法自动下载');
+            }
+        }, 1000);
+    }
+
+    // ========================== 初始化 ==========================
+    (async function init(){
+        try{
+            await openDB();
+            const loaded = await loadFromDB();
+            if (loaded.tags.length) tags = loaded.tags;
+            if (loaded.magnets.length) magnets = loaded.magnets;
+            if (loaded.rules.length) autoTagRules = loaded.rules.map(r => ({ keyword: r.keyword, tagId: r.tagId }));
+            await loadFilterWordsFromDB();
+            await loadFailListFromDB();
+            const stored = localStorage.getItem('tagOrder');
+            if (stored) {
+                try {
+                    tagOrder = JSON.parse(stored);
+                    const existingIds = new Set(tags.map(t => t.id));
+                    tagOrder = tagOrder.filter(id => existingIds.has(id));
+                    const missingIds = tags.map(t => t.id).filter(id => !tagOrder.includes(id));
+                    tagOrder.push(...missingIds);
+                    sortTagsByOrder();
+                } catch(e) {}
+            }
+            if (!tagOrder || tagOrder.length === 0) {
+                tagOrder = tags.map(t => t.id);
+                saveTagOrder();
+            }
+            if (!magnets.length) {
+                magnets = [
+                    { id: Date.now() - 100000, magnetLink: "magnet:?xt=urn:btih:aaa", title: "奥本海默 2023", imageUrl: "https://picsum.photos/id/111/400/200", size: "1.2 GB", tagIds: [1,2], rating: 5, createdAt: Date.now() - 100000 },
+                    { id: Date.now() - 50000, magnetLink: "magnet:?xt=urn:btih:bbb", title: "最后生还者 第一季", imageUrl: "https://picsum.photos/id/119/400/200", size: "3.5 GB", tagIds: [2,3], rating: 4, createdAt: Date.now() - 50000 }
+                ];
+                await saveToDB();
+            }
+            nextTagId = tags.length ? Math.max(...tags.map(t=>t.id),0)+1 : 4;
+            nextMagnetId = magnets.length ? Math.max(...magnets.map(m=>m.id),0)+1 : 1;
+            if (autoTagRules.length === 0) migrateOldRulesFromLocalStorage();
+            loadCollapsedState();
+            bindButtons();
+            bindDelegatedEvents();
+            renderAll();
+            setupRatingFilter();
+            bindCollapsible();
+            setupShiftSelection();
+            attachCardClickHandler();
+            bindDuplicateModalEvents();
+            initTheme();
+            renderFilterWordsList();
+            document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+            console.log('初始化完成，支持扩展代理下载');
+        } catch(err){
+            console.error(err);
+            alert('初始化失败，请刷新页面重试。错误：'+err.message);
+        }
+    })();
+})();
+</script>
+</body>
+</html>
