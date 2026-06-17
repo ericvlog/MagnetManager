@@ -569,11 +569,29 @@
     }
 
     // ========================== 核心：图片保存（支持扩展回退） ==========================
-    async function saveImageToLocal(magnetId, skipToast = false, retryOn429 = true) {
-        const magnet = magnets.find(m => m.id === magnetId);
-        if (!magnet || !magnet.imageUrl) { if(!skipToast) showToast('没有可保存的图片', true); return false; }
-        if (magnet.imageUrl.startsWith('img_')) { if(!skipToast) showToast('图片已经是本地存储', false); return false; }
+async function saveImageToLocal(magnetId, skipToast = false, retryOn429 = true) {
+    const magnet = magnets.find(m => m.id === magnetId);
+    if (!magnet || !magnet.imageUrl) { if(!skipToast) showToast('没有可保存的图片', true); return false; }
+    if (magnet.imageUrl.startsWith('img_')) { if(!skipToast) showToast('图片已经是本地存储', false); return false; }
 
+    let blob = null;
+    let fromExtension = false;
+
+    // ===== 优先使用扩展代理（如果可用） =====
+    if (window.__MAGNET_HELPER_EXTENSION__) {
+        try {
+            if(!skipToast) showToast('使用扩展代理下载...', false);
+            blob = await fetchImageViaExtension(magnet.imageUrl);
+            fromExtension = true;
+        } catch (extError) {
+            let reason = extError.message;
+            if(!skipToast) showToast(`扩展代理下载失败: ${reason}，尝试标准下载`, true);
+            // 扩展失败，继续尝试标准 fetch
+        }
+    }
+
+    // ===== 如果扩展不可用或失败，使用标准 fetch =====
+    if (!blob) {
         const fetchWithRetry = async (retry = true) => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -589,67 +607,19 @@
                 }
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.startsWith('image/')) throw new Error(`非图片类型: ${contentType}`);
-                const blob = await response.blob();
-                if (blob.size === 0) throw new Error('图片大小为0');
-                return blob;
+                const responseBlob = await response.blob();
+                if (responseBlob.size === 0) throw new Error('图片大小为0');
+                return responseBlob;
             } catch(e) {
                 clearTimeout(timeoutId);
                 throw e;
             }
         };
-
-        let blob = null;
-        let fromExtension = false;
         try {
             blob = await fetchWithRetry(retryOn429);
         } catch (e) {
-            if (e.message.includes('Failed to fetch') || e.message.includes('CORS') || e.message.includes('NetworkError') || e.message.includes('HTTP')) {
-                try {
-                    if(!skipToast) showToast('标准下载失败，尝试通过扩展代理...', false);
-                    blob = await fetchImageViaExtension(magnet.imageUrl);
-                    fromExtension = true;
-                } catch (extError) {
-                    let reason = extError.message;
-                    if(!skipToast) showToast(`图片下载失败: ${reason}`, true);
-                    const existing = failList.find(f => f.cardId === magnetId);
-                    if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason });
-                    else existing.reason = reason;
-                    await saveFailListToDB();
-                    return false;
-                }
-            } else {
-                let reason = e.message;
-                if(!skipToast) showToast(`图片下载失败: ${reason}`, true);
-                const existing = failList.find(f => f.cardId === magnetId);
-                if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason });
-                else existing.reason = reason;
-                await saveFailListToDB();
-                return false;
-            }
-        }
-
-        try {
-            const newId = await storeImageBlob(magnet.imageUrl, blob);
-            if (newId) {
-                magnet.imageUrl = newId;
-                await saveToDB();
-                const idx = failList.findIndex(f => f.cardId === magnetId);
-                if (idx !== -1) {
-                    failList.splice(idx, 1);
-                    await saveFailListToDB();
-                }
-                updateFilteredList();
-                currentLoadedCount = 0;
-                await renderLoadedCards();
-                updateStats(allFilteredMagnets.length, magnets.length);
-                if(!skipToast) showToast('图片已保存到本地，链接永不过期' + (fromExtension ? ' (通过扩展代理)' : ''));
-                return true;
-            } else {
-                throw new Error('存储到IndexedDB失败');
-            }
-        } catch (e) {
             let reason = e.message;
-            if(!skipToast) showToast(`存储失败: ${reason}`, true);
+            if(!skipToast) showToast(`标准下载失败: ${reason}`, true);
             const existing = failList.find(f => f.cardId === magnetId);
             if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason });
             else existing.reason = reason;
@@ -658,6 +628,36 @@
         }
     }
 
+    // ===== 存储 blob 到 IndexedDB =====
+    try {
+        const newId = await storeImageBlob(magnet.imageUrl, blob);
+        if (newId) {
+            magnet.imageUrl = newId;
+            await saveToDB();
+            const idx = failList.findIndex(f => f.cardId === magnetId);
+            if (idx !== -1) {
+                failList.splice(idx, 1);
+                await saveFailListToDB();
+            }
+            updateFilteredList();
+            currentLoadedCount = 0;
+            await renderLoadedCards();
+            updateStats(allFilteredMagnets.length, magnets.length);
+            if(!skipToast) showToast('图片已保存到本地，链接永不过期' + (fromExtension ? ' (通过扩展代理)' : ''));
+            return true;
+        } else {
+            throw new Error('存储到IndexedDB失败');
+        }
+    } catch (e) {
+        let reason = e.message;
+        if(!skipToast) showToast(`存储失败: ${reason}`, true);
+        const existing = failList.find(f => f.cardId === magnetId);
+        if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason });
+        else existing.reason = reason;
+        await saveFailListToDB();
+        return false;
+    }
+}
     // ========================== 原有功能：批量转换等（已适配新saveImageToLocal） ==========================
     function showProgressModal() { document.getElementById('progressModal').style.display = 'flex'; }
     function hideProgressModal() { document.getElementById('progressModal').style.display = 'none'; }
