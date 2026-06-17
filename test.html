@@ -801,14 +801,6 @@
     function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
     function bindButtons() {
         // --- 新增：监听扩展就绪消息 ---
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'EXTENSION_READY') {
-                window.__MAGNET_HELPER_EXTENSION__ = true;
-                console.log('✅ 磁力管理器图片助手扩展已安装');
-                showToast('✅ 图片助手扩展已启用，可自动下载CORS受限图片');
-            }
-        });
-
         // 原有菜单绑定
         document.getElementById('menuAddMagnet').onclick = openAddMagnet;
         document.getElementById('menuImportClipboard').onclick = importFromClipboard;
@@ -896,6 +888,20 @@
     // ========================== 初始化 ==========================
     (async function init(){
         try{
+        // ===== 检测扩展是否安装（通过 DOM 属性） =====
+        if (document.documentElement.getAttribute('data-extension-installed') === 'true') {
+            window.__MAGNET_HELPER_EXTENSION__ = true;
+            console.log('✅ 磁力管理器图片助手扩展已安装 (通过DOM检测)');
+            showToast('✅ 图片助手扩展已启用，可自动下载CORS受限图片');
+        } else {
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'EXTENSION_READY') {
+                    window.__MAGNET_HELPER_EXTENSION__ = true;
+                    console.log('✅ 磁力管理器图片助手扩展已安装 (通过消息)');
+                    showToast('✅ 图片助手扩展已启用，可自动下载CORS受限图片');
+                }
+            });
+        }
             await openDB();
             const loaded = await loadFromDB();
             if (loaded.tags.length) tags = loaded.tags;
