@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>磁力管理器 · 完整功能版（扩展代理优化）</title>
+    <title>磁力管理器 · 完整功能版（支持扩展代理）</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        /* ===== 完整样式 ===== */
+        /* ===== 完整样式（与您确认可用的版本一致） ===== */
         :root {
             --bg-body: #f1f5f9;
             --bg-sidebar: white;
@@ -558,7 +558,7 @@
         });
     }
 
-    // ========================== 核心：图片保存（优先扩展代理） ==========================
+    // ========================== 核心：图片保存（仅使用扩展代理，不回退到fetch） ==========================
     async function saveImageToLocal(magnetId, skipToast = false, retryOn429 = true) {
         const magnet = magnets.find(m => m.id === magnetId);
         if (!magnet || !magnet.imageUrl) { if(!skipToast) showToast('没有可保存的图片', true); return false; }
@@ -567,7 +567,7 @@
         let blob = null;
         let fromExtension = false;
 
-        // ---- 1. 优先使用扩展代理 ----
+        // ---- 仅使用扩展代理 ----
         if (window.__MAGNET_HELPER_EXTENSION__) {
             try {
                 if(!skipToast) showToast('使用扩展代理下载...', false);
@@ -584,7 +584,7 @@
             return false;
         }
 
-        // ---- 2. 存储 blob 到 IndexedDB ----
+        // ---- 存储 blob 到 IndexedDB ----
         try {
             const newId = await storeImageBlob(magnet.imageUrl, blob);
             if (newId) {
@@ -948,7 +948,6 @@
         }
     })();
 })();
-console.log('✅ 磁力管理器已完全加载，所有功能就绪！');
 </script>
 </body>
 </html>
