@@ -390,7 +390,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
         .auto-import-group input[type="number"] {
             width: 60px;
@@ -438,7 +438,7 @@
         </div>
     </div>
     <div class="main-content">
-        <!-- ===== TOP ACTIONS ===== 此处新增了扩展导入和自动导入控件 -->
+        <!-- ===== TOP ACTIONS ===== -->
         <div class="top-actions">
             <button id="hideImageBtn" class="hide-image-btn"><i class="fas fa-image"></i> 隐藏图片</button>
             <button class="btn btn-primary" id="topAddMagnetBtn">➕ 添加磁力</button>
@@ -447,13 +447,16 @@
             <button id="importFromExtensionBtn" class="btn" style="background:#306eff;color:white;">
                 <i class="fas fa-cloud-download-alt"></i> 从扩展导入队列
             </button>
-            <!-- 新增：自动导入控件 -->
+            <!-- 自动导入控件（含清空队列复选框，强制一行） -->
             <div class="auto-import-group">
-                <input type="number" id="autoImportInterval" value="10" min="0.1" step="0.1" title="间隔分钟数（支持小数，如 0.3）">
+                <input type="number" id="autoImportInterval" value="10" min="0.1" step="0.1" title="间隔分钟数（支持小数）">
                 <span style="font-size:0.8rem; color:var(--text-secondary);">分钟</span>
-                <button id="autoImportToggleBtn" class="btn" style="background:#10b981; color:white;">
+                <button id="autoImportToggleBtn" class="btn" style="background:#10b981; color:white; white-space:nowrap;">
                     <i class="fas fa-play"></i> 启动
                 </button>
+                <label style="font-size:0.8rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
+                    <input type="checkbox" id="clearAfterImport" checked> 清空队列
+                </label>
                 <span id="autoImportStatus" class="status-text">已停止</span>
             </div>
         </div>
@@ -952,7 +955,7 @@
     function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
 
     // ================================================================
-    // ===== 新增：从扩展导入队列 + 自动导入 ==========================
+    // ===== 从扩展导入队列 + 自动导入（已修改为通过 postMessage 清空）=====
     // ================================================================
 
     let autoImportTimer = null;
@@ -1026,38 +1029,68 @@
             currentLoadedCount = 0;
             renderLoadedCards();
             updateStats(allFilteredMagnets.length, magnets.length);
-            showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力`);
-            // 不清除扩展队列，由用户手动清空或保留
+
+            // ===== 根据复选框决定是否清空队列（通过 postMessage）=====
+            const clearAfter = document.getElementById('clearAfterImport')?.checked ?? false;
+            if (clearAfter) {
+                try {
+                    const clearResult = await new Promise((resolve, reject) => {
+                        const handler = (event) => {
+                            if (event.data && event.data.type === 'CLEAR_PENDING_MAGNETS_RESULT') {
+                                window.removeEventListener('message', handler);
+                                if (event.data.success) {
+                                    resolve(true);
+                                } else {
+                                    reject(new Error(event.data.error || '清空失败'));
+                                }
+                            }
+                        };
+                        window.addEventListener('message', handler);
+                        window.postMessage({ type: 'REQUEST_CLEAR_PENDING_MAGNETS' }, '*');
+                        setTimeout(() => {
+                            window.removeEventListener('message', handler);
+                            reject(new Error('清空请求超时'));
+                        }, 5000);
+                    });
+                    console.log('[自动导入] 扩展队列已清空');
+                    showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，已清空队列`);
+                } catch (err) {
+                    console.warn('[自动导入] 清空队列失败:', err.message);
+                    showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，但清空队列失败`, true);
+                }
+            } else {
+                showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力（保留队列）`);
+            }
         } catch (err) {
             showToast('❌ 从扩展导入失败：' + err.message, true);
         }
     }
 
-    // 自动导入控制
-function startAutoImport() {
-    const intervalInput = document.getElementById('autoImportInterval');
-    const minutes = parseFloat(intervalInput.value) || 10;   // 用 parseFloat 保留小数
-    if (minutes < 0.1) {
-        alert('间隔至少 0.1 分钟（6 秒）');
-        return;    // 条件不满足时直接返回，不启动定时器
+    // 自动导入控制（支持小数间隔）
+    function startAutoImport() {
+        const intervalInput = document.getElementById('autoImportInterval');
+        const minutes = parseFloat(intervalInput.value) || 10;
+        if (minutes < 0.1) {
+            alert('间隔至少 0.1 分钟（6 秒）');
+            return;
+        }
+        autoImportIntervalMinutes = minutes;
+        if (autoImportTimer) clearInterval(autoImportTimer);
+        autoImportTimer = setInterval(() => {
+            console.log('[自动导入] 定时触发导入');
+            importFromExtension();
+        }, minutes * 60 * 1000);
+        const toggleBtn = document.getElementById('autoImportToggleBtn');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-pause"></i> 停止';
+            toggleBtn.style.background = '#ef4444';
+        }
+        const statusSpan = document.getElementById('autoImportStatus');
+        if (statusSpan) statusSpan.textContent = `⏳ 每 ${minutes} 分钟自动导入`;
+        localStorage.setItem('autoImportRunning', 'true');
+        localStorage.setItem('autoImportInterval', String(minutes));
+        showToast(`自动导入已启动，间隔 ${minutes} 分钟`);
     }
-    autoImportIntervalMinutes = minutes;
-    if (autoImportTimer) clearInterval(autoImportTimer);
-    autoImportTimer = setInterval(() => {
-        console.log('[自动导入] 定时触发导入');
-        importFromExtension();
-    }, minutes * 60 * 1000);
-    const toggleBtn = document.getElementById('autoImportToggleBtn');
-    if (toggleBtn) {
-        toggleBtn.innerHTML = '<i class="fas fa-pause"></i> 停止';
-        toggleBtn.style.background = '#ef4444';
-    }
-    const statusSpan = document.getElementById('autoImportStatus');
-    if (statusSpan) statusSpan.textContent = `⏳ 每 ${minutes} 分钟自动导入`;
-    localStorage.setItem('autoImportRunning', 'true');
-    localStorage.setItem('autoImportInterval', String(minutes));
-    showToast(`自动导入已启动，间隔 ${minutes} 分钟`);
-}
 
     function stopAutoImport() {
         if (autoImportTimer) {
@@ -1086,7 +1119,7 @@ function startAutoImport() {
     }
 
     // ================================================================
-    // ===== 原有事件绑定函数（新增导入相关按钮） ======================
+    // ===== 原有事件绑定函数 ==========================================
     // ================================================================
 
     function bindButtons() {
@@ -1170,7 +1203,7 @@ function startAutoImport() {
             e.target.value = '';
         });
 
-        // ---- 新增：扩展导入按钮 ----
+        // ---- 扩展导入按钮 ----
         const importFromExtBtn = document.getElementById('importFromExtensionBtn');
         if (importFromExtBtn) {
             importFromExtBtn.onclick = importFromExtension;
@@ -1252,7 +1285,6 @@ function startAutoImport() {
             }
             const autoRunning = localStorage.getItem('autoImportRunning') === 'true';
             if (autoRunning) {
-                // 延迟一小段时间确保页面加载完成
                 setTimeout(() => {
                     startAutoImport();
                 }, 500);
