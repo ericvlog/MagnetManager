@@ -449,7 +449,7 @@
             </button>
             <!-- 新增：自动导入控件 -->
             <div class="auto-import-group">
-                <input type="number" id="autoImportInterval" value="10" min="1" step="1" title="间隔分钟数">
+                <input type="number" id="autoImportInterval" value="10" min="0.1" step="0.1" title="间隔分钟数（支持小数，如 0.3）">
                 <span style="font-size:0.8rem; color:var(--text-secondary);">分钟</span>
                 <button id="autoImportToggleBtn" class="btn" style="background:#10b981; color:white;">
                     <i class="fas fa-play"></i> 启动
@@ -1034,27 +1034,30 @@
     }
 
     // 自动导入控制
-    function startAutoImport() {
-        const intervalInput = document.getElementById('autoImportInterval');
-        const minutes = parseInt(intervalInput.value) || 10;
-        if (minutes < 1) { alert('间隔至少 1 分钟'); return; }
-        autoImportIntervalMinutes = minutes;
-        if (autoImportTimer) clearInterval(autoImportTimer);
-        autoImportTimer = setInterval(() => {
-            console.log('[自动导入] 定时触发导入');
-            importFromExtension();
-        }, minutes * 60 * 1000);
-        const toggleBtn = document.getElementById('autoImportToggleBtn');
-        if (toggleBtn) {
-            toggleBtn.innerHTML = '<i class="fas fa-pause"></i> 停止';
-            toggleBtn.style.background = '#ef4444';
-        }
-        const statusSpan = document.getElementById('autoImportStatus');
-        if (statusSpan) statusSpan.textContent = `⏳ 每 ${minutes} 分钟自动导入`;
-        localStorage.setItem('autoImportRunning', 'true');
-        localStorage.setItem('autoImportInterval', String(minutes));
-        showToast(`自动导入已启动，间隔 ${minutes} 分钟`);
+function startAutoImport() {
+    const intervalInput = document.getElementById('autoImportInterval');
+    const minutes = parseFloat(intervalInput.value) || 10;   // 用 parseFloat 保留小数
+    if (minutes < 0.1) {
+        alert('间隔至少 0.1 分钟（6 秒）');
+        return;    // 条件不满足时直接返回，不启动定时器
     }
+    autoImportIntervalMinutes = minutes;
+    if (autoImportTimer) clearInterval(autoImportTimer);
+    autoImportTimer = setInterval(() => {
+        console.log('[自动导入] 定时触发导入');
+        importFromExtension();
+    }, minutes * 60 * 1000);
+    const toggleBtn = document.getElementById('autoImportToggleBtn');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = '<i class="fas fa-pause"></i> 停止';
+        toggleBtn.style.background = '#ef4444';
+    }
+    const statusSpan = document.getElementById('autoImportStatus');
+    if (statusSpan) statusSpan.textContent = `⏳ 每 ${minutes} 分钟自动导入`;
+    localStorage.setItem('autoImportRunning', 'true');
+    localStorage.setItem('autoImportInterval', String(minutes));
+    showToast(`自动导入已启动，间隔 ${minutes} 分钟`);
+}
 
     function stopAutoImport() {
         if (autoImportTimer) {
