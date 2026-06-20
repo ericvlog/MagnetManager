@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        /* ===== 完整样式 ===== */
+        /* ===== 完整样式（保持不变） ===== */
         :root {
             --bg-body: #f1f5f9;
             --bg-sidebar: white;
@@ -75,7 +75,7 @@
         .sidebar-group .menu-item { padding-left: 40px; }
         .sidebar.collapsed .sidebar-group details { display: none; }
         .main-content { flex: 1; padding: 2rem; overflow-x: auto; }
-        .top-actions { display: flex; gap: 12px; margin-bottom: 1.5rem; justify-content: flex-end; flex-wrap: wrap; }
+        .top-actions { display: flex; gap: 12px; margin-bottom: 1.5rem; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
         .btn { border: none; padding: 0.5rem 1rem; border-radius: 40px; font-weight: 600; cursor: pointer; background: var(--btn-bg); box-shadow: var(--btn-shadow); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); }
         .btn-primary { background: #0f3b3f; color: white; }
         .btn-primary:hover { background: #0a2c2f; }
@@ -385,6 +385,26 @@
         }
         .pikpak-success { color: #10b981; }
         .pikpak-error { color: #ef4444; }
+        /* 自动导入控件微调 */
+        .auto-import-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .auto-import-group input[type="number"] {
+            width: 60px;
+            padding: 4px 6px;
+            border-radius: 20px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+        .auto-import-group .status-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-left: 4px;
+        }
     </style>
 </head>
 <body>
@@ -418,7 +438,26 @@
         </div>
     </div>
     <div class="main-content">
-        <div class="top-actions"><button id="hideImageBtn" class="hide-image-btn"><i class="fas fa-image"></i> 隐藏图片</button><button class="btn btn-primary" id="topAddMagnetBtn">➕ 添加磁力</button><button class="btn btn-success" id="topImportClipboardBtn">📋 从剪贴板导入</button></div>
+        <!-- ===== TOP ACTIONS ===== 此处新增了扩展导入和自动导入控件 -->
+        <div class="top-actions">
+            <button id="hideImageBtn" class="hide-image-btn"><i class="fas fa-image"></i> 隐藏图片</button>
+            <button class="btn btn-primary" id="topAddMagnetBtn">➕ 添加磁力</button>
+            <button class="btn btn-success" id="topImportClipboardBtn">📋 从剪贴板导入</button>
+            <!-- 新增：从扩展导入队列按钮 -->
+            <button id="importFromExtensionBtn" class="btn" style="background:#306eff;color:white;">
+                <i class="fas fa-cloud-download-alt"></i> 从扩展导入队列
+            </button>
+            <!-- 新增：自动导入控件 -->
+            <div class="auto-import-group">
+                <input type="number" id="autoImportInterval" value="10" min="1" step="1" title="间隔分钟数">
+                <span style="font-size:0.8rem; color:var(--text-secondary);">分钟</span>
+                <button id="autoImportToggleBtn" class="btn" style="background:#10b981; color:white;">
+                    <i class="fas fa-play"></i> 启动
+                </button>
+                <span id="autoImportStatus" class="status-text">已停止</span>
+            </div>
+        </div>
+        <!-- ===== 其余内容不变 ===== -->
         <div class="drag-area" id="tagsDragArea"><div class="drag-header" data-target="tagsContent"><div class="drag-title"><i class="fas fa-hashtag"></i> 🏷️ 拖拽标签可排序（点击筛选）</div><i class="fas fa-chevron-down toggle-icon"></i></div><div class="drag-content" id="tagsContent"><div id="draggableTagsList" class="tags-container"></div></div></div>
         <div class="filter-bar">
             <input type="text" id="searchInput" placeholder="🔍 搜索标题或标签" style="width:200px">
