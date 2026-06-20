@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>磁力管理器 · 完整功能版（支持扩展代理 & PikPak 桥接）</title>
+    <title>磁力管理器 · 完整功能版（支持扩展代理 & 离线下载）</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -287,38 +287,104 @@
             font-family: monospace;
         }
         .word-item:last-child { border-bottom: none; }
-        .delete-word-btn { background: #ef4444; color: white; border: none; border-radius: 20px; padding: 2px 10px; cursor: pointer; font-size: 0.7rem; }
+        .delete-word-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 2px 10px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
         .delete-word-btn:hover { background: #dc2626; }
-        .add-word-input { display: flex; gap: 8px; margin-top: 8px; }
+        .add-word-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
         .add-word-input input { flex: 1; }
-        .fail-list-container { max-height: 60vh; overflow-y: auto; }
-        .fail-item { padding: 12px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .fail-list-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .fail-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
         .fail-info { flex: 1; }
         .fail-title { font-weight: bold; }
-        .fail-url { font-family: monospace; font-size: 0.7rem; color: var(--text-secondary); word-break: break-all; }
-        .fail-reason { font-size: 0.7rem; color: #ef4444; margin-top: 4px; }
-        .retry-fail-btn { background: #0f3b3f; color: white; border: none; border-radius: 20px; padding: 4px 10px; cursor: pointer; font-size: 0.7rem; }
+        .fail-url {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+        .fail-reason {
+            font-size: 0.7rem;
+            color: #ef4444;
+            margin-top: 4px;
+        }
+        .retry-fail-btn {
+            background: #0f3b3f;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
         .retry-fail-btn:hover { background: #0a2c2f; }
-        .retry-all-btn, .delete-all-fail-btn { background: #10b981; color: white; border: none; border-radius: 20px; padding: 6px 16px; cursor: pointer; font-size: 0.8rem; margin-right: 8px; }
+        .retry-all-btn, .delete-all-fail-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
         .delete-all-fail-btn { background: #ef4444; }
         .delete-all-fail-btn:hover { background: #dc2626; }
-        .progress-container { padding: 1rem; text-align: center; }
-        .progress-bar { width: 100%; height: 20px; background-color: var(--border-color); border-radius: 10px; overflow: hidden; margin: 12px 0; }
-        .progress-fill { width: 0%; height: 100%; background-color: #10b981; transition: width 0.3s; }
-        .progress-text { font-size: 0.9rem; margin: 8px 0; }
-        .send-pikpak-btn { color: #0f3b3f; font-weight: bold; }
+        .progress-container {
+            padding: 1rem;
+            text-align: center;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background-color: #10b981;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            font-size: 0.9rem;
+            margin: 8px 0;
+        }
+        .send-pikpak-btn {
+            color: #0f3b3f;
+            font-weight: bold;
+        }
         body.dark .send-pikpak-btn { color: #90caf9; }
-        .pikpak-status { font-size: 0.65rem; margin-left: 4px; opacity: 0.7; }
+        .pikpak-status {
+            font-size: 0.65rem;
+            margin-left: 4px;
+            opacity: 0.7;
+        }
         .pikpak-success { color: #10b981; }
         .pikpak-error { color: #ef4444; }
-        #refreshTokenBtn {
-            margin-left: 8px;
-            background: #f59e0b;
-            color: #0f172a;
-        }
-        #refreshTokenBtn:hover {
-            background: #d97706;
-        }
     </style>
 </head>
 <body>
@@ -352,12 +418,7 @@
         </div>
     </div>
     <div class="main-content">
-        <div class="top-actions">
-            <button id="hideImageBtn" class="hide-image-btn"><i class="fas fa-image"></i> 隐藏图片</button>
-            <button id="refreshTokenBtn" class="btn" title="刷新 PikPak Token（仅当通过扩展通信时有效）">🔄 刷新 Token</button>
-            <button class="btn btn-primary" id="topAddMagnetBtn">➕ 添加磁力</button>
-            <button class="btn btn-success" id="topImportClipboardBtn">📋 从剪贴板导入</button>
-        </div>
+        <div class="top-actions"><button id="hideImageBtn" class="hide-image-btn"><i class="fas fa-image"></i> 隐藏图片</button><button class="btn btn-primary" id="topAddMagnetBtn">➕ 添加磁力</button><button class="btn btn-success" id="topImportClipboardBtn">📋 从剪贴板导入</button></div>
         <div class="drag-area" id="tagsDragArea"><div class="drag-header" data-target="tagsContent"><div class="drag-title"><i class="fas fa-hashtag"></i> 🏷️ 拖拽标签可排序（点击筛选）</div><i class="fas fa-chevron-down toggle-icon"></i></div><div class="drag-content" id="tagsContent"><div id="draggableTagsList" class="tags-container"></div></div></div>
         <div class="filter-bar">
             <input type="text" id="searchInput" placeholder="🔍 搜索标题或标签" style="width:200px">
@@ -575,7 +636,7 @@
             if (newId) {
                 magnet.imageUrl = newId;
                 await saveToDB();
-                const idx = failList.find(f => f.cardId === magnetId);
+                const idx = failList.findIndex(f => f.cardId === magnetId);
                 if (idx !== -1) {
                     failList.splice(idx, 1);
                     await saveFailListToDB();
@@ -600,11 +661,12 @@
         }
     }
 
-    // ========================== PikPak 离线功能（优先扩展，回退 opener） ==========================
+    // ========================== PikPak 离线下载（优先扩展，回退 opener） ==========================
     let _pikpakBridgeOpened = false;
+
     function sendToPikPakViaBridge(magnetLink) {
         return new Promise((resolve, reject) => {
-            // 1. 检测扩展是否可用（通过 content script 标记）
+            // 1. 检测扩展是否可用
             if (window.__MAGNET_HELPER_EXTENSION__) {
                 console.log('[PikPak桥接] 使用扩展代理');
                 const handler = (event) => {
@@ -614,7 +676,7 @@
                             resolve(event.data.data);
                         } else {
                             if (event.data.code === 'TOKEN_EXPIRED') {
-                                alert('⚠️ PikPak Token 已过期，请打开 PikPak 页面重新登录，然后点击“刷新 Token”按钮。');
+                                alert('⚠️ PikPak Token 已过期，请打开 PikPak 页面重新登录，然后刷新管理器页面。');
                             }
                             reject(new Error(event.data.error));
                         }
@@ -623,7 +685,6 @@
                 window.addEventListener('message', handler);
                 window.postMessage({ type: 'REQUEST_PIKPAK_OFFLINE', magnet: magnetLink }, '*');
 
-                // 超时处理（扩展未响应）
                 setTimeout(() => {
                     window.removeEventListener('message', handler);
                     reject(new Error('扩展未响应，请确认扩展已启用'));
@@ -631,10 +692,9 @@
                 return;
             }
 
-            // 2. 回退到原有的 opener 方式（油猴桥接）
+            // 2. 回退到 opener 方式（油猴桥接）
             console.log('[PikPak桥接] 使用 opener 方式（油猴桥接）');
 
-            // 如果没有 opener 且没有 parent，尝试打开 PikPak 页面
             if (!window.opener && !window.parent && !_pikpakBridgeOpened) {
                 _pikpakBridgeOpened = true;
                 const newWindow = window.open('https://mypikpak.com', '_blank');
@@ -650,12 +710,10 @@
             }
 
             const target = window.opener || window.parent || window;
-            // doSend 内部已清除超时
             doSend(target, magnetLink, resolve, reject);
         });
     }
 
-    // 实际发送（带超时清除）
     function doSend(target, magnetLink, resolve, reject) {
         let timeoutId = null;
         const handler = (event) => {
@@ -663,10 +721,8 @@
                 if (timeoutId) clearTimeout(timeoutId);
                 window.removeEventListener('message', handler);
                 if (event.data.success) {
-                    console.log('[PikPak桥接] 成功:', event.data);
                     resolve(event.data.data);
                 } else {
-                    console.error('[PikPak桥接] 失败:', event.data.error);
                     reject(new Error(event.data.error));
                 }
             }
@@ -680,7 +736,7 @@
 
         timeoutId = setTimeout(() => {
             window.removeEventListener('message', handler);
-            reject(new Error('桥接超时，请确认：\n1. 已安装并启用油猴桥接脚本\n2. PikPak 页面已打开并保持登录\n3. 刷新 PikPak 页面后重试'));
+            reject(new Error('桥接超时，请确认油猴桥接脚本已启用'));
         }, 15000);
     }
 
@@ -783,14 +839,7 @@
 
     // ========================== 卡片渲染 ==========================
     function updateFilteredList(){ const search=document.getElementById('searchInput').value.toLowerCase(); let filtered=magnets.filter(m=>{ if(search){ const titleMatch=m.title.toLowerCase().includes(search); const tagMatch=m.tagIds.some(tid=>tags.find(t=>t.id===tid)?.name.toLowerCase().includes(search)); if(!titleMatch&&!tagMatch) return false; } if(currentRatingFilter>0&&m.rating!==currentRatingFilter) return false; return true; }); filtered.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); allFilteredMagnets=filtered; }
-    async function renderLoadedCards(){ const container=document.getElementById('magnetGridContainer'); const loaded=allFilteredMagnets.slice(0,currentLoadedCount); if(loaded.length===0&&allFilteredMagnets.length>0){ currentLoadedCount=Math.min(pageSize,allFilteredMagnets.length); return renderLoadedCards(); } if(loaded.length===0){ container.innerHTML='<div style="text-align:center;padding:2rem">暂无磁力</div>'; document.getElementById('loadMoreTrigger').style.display='none'; return; } container.innerHTML=loaded.map(m=>{ let tagSpans=m.tagIds.map(tid=>tags.find(t=>t.id===tid)).filter(t=>t).map(t=>`<span class="tag">${escapeHtml(t.name)}</span>`).join(''); let stars=''; for(let i=1;i<=5;i++) stars+=`<i class="${i<=m.rating?'fas fa-star active':'far fa-star'}" data-rating="${i}"></i>`; const checked=selectedCardIds.has(m.id)?'checked':''; const shortLink=m.magnetLink.length>45?m.magnetLink.substring(0,45)+'...':m.magnetLink; const isLocal=m.imageUrl&&m.imageUrl.startsWith('img_'); const badge=isLocal?'<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>':(m.imageUrl?'<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>':''); return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\" viewBox=\"0 0 400 200\"%3E%3Crect width=\"400\" height=\"200\" fill=\"%23e2e8f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" font-family=\"Arial\" font-size=\"16\" fill=\"%23475569\" text-anchor=\"middle\" dy=\".3em\"%3ELoading...%3C/text%3E%3C/svg%3E')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div>`; }).join(''); if(selectionMode){ document.querySelectorAll('.card-checkbox').forEach(cb=>{ cb.addEventListener('change',(e)=>{ e.stopPropagation(); const id=parseInt(cb.dataset.id); if(cb.checked) selectedCardIds.add(id); else selectedCardIds.delete(id); updateSelectedCount(); }); }); } document.querySelectorAll('.star-rating').forEach(div=>{ const mid=parseInt(div.dataset.id); const m=magnets.find(m=>m.id===mid); if(!m) return; const stars=div.querySelectorAll('i'); stars.forEach((star,idx)=>{ star.addEventListener('click',(e)=>{ e.stopPropagation(); let newRating=idx+1; if(m.rating===newRating) newRating=0; if(m.rating!==newRating){ m.rating=newRating; saveToDB().then(()=>{ updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); } }); }); }); document.querySelectorAll('.copy-magnet').forEach(btn=>btn.addEventListener('click',(e)=>{ e.stopPropagation(); copyMagnetLink(btn.getAttribute('data-magnet')); })); document.querySelectorAll('.preview-img').forEach(div=>{ div.addEventListener('click',(e)=>{ e.stopPropagation(); const url=div.getAttribute('data-img-url'); if(url) showImagePreview(url); }); }); document.querySelectorAll('.save-image-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const id= parseInt(btn.getAttribute('data-id')); await saveImageToLocal(id,false); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }); }); document.querySelectorAll('.send-pikpak-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const magnet = btn.getAttribute('data-magnet'); try { await sendToPikPakViaBridge(magnet); showToast('✅ 已发送到 PikPak，任务创建成功！'); } catch (err) { showToast('❌ ' + err.message, true); } }); }); bindMagnetLinkEvents(); for(const card of container.querySelectorAll('.magnet-card')){ const mid=parseInt(card.getAttribute('data-id')); const m=magnets.find(m=>m.id===mid); if(m){ const url=await getImageUrlForCard(m); const preview=card.querySelector('.preview-img'); if(preview){ preview.style.backgroundImage=`url(${url})`; preview.setAttribute('data-img-url',url); } } } // 强制应用网格列数
-        const cols = parseInt(document.getElementById('columnsSelect').value, 10);
-        container.style.gridTemplateColumns = `repeat(${cols}, minmax(280px, 1fr))`;
-        // 延迟再执行一次，确保覆盖任何异步重置
-        requestAnimationFrame(() => {
-            container.style.gridTemplateColumns = `repeat(${cols}, minmax(280px, 1fr))`;
-        });
-        const trigger=document.getElementById('loadMoreTrigger'); if(currentLoadedCount<allFilteredMagnets.length){ trigger.style.display='flex'; trigger.innerText='向下滚动加载更多...'; }else{ trigger.style.display='none'; } }
+    async function renderLoadedCards(){ const container=document.getElementById('magnetGridContainer'); const loaded=allFilteredMagnets.slice(0,currentLoadedCount); if(loaded.length===0&&allFilteredMagnets.length>0){ currentLoadedCount=Math.min(pageSize,allFilteredMagnets.length); return renderLoadedCards(); } if(loaded.length===0){ container.innerHTML='<div style="text-align:center;padding:2rem">暂无磁力</div>'; document.getElementById('loadMoreTrigger').style.display='none'; return; } container.innerHTML=loaded.map(m=>{ let tagSpans=m.tagIds.map(tid=>tags.find(t=>t.id===tid)).filter(t=>t).map(t=>`<span class="tag">${escapeHtml(t.name)}</span>`).join(''); let stars=''; for(let i=1;i<=5;i++) stars+=`<i class="${i<=m.rating?'fas fa-star active':'far fa-star'}" data-rating="${i}"></i>`; const checked=selectedCardIds.has(m.id)?'checked':''; const shortLink=m.magnetLink.length>45?m.magnetLink.substring(0,45)+'...':m.magnetLink; const isLocal=m.imageUrl&&m.imageUrl.startsWith('img_'); const badge=isLocal?'<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>':(m.imageUrl?'<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>':''); return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\" viewBox=\"0 0 400 200\"%3E%3Crect width=\"400\" height=\"200\" fill=\"%23e2e8f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" font-family=\"Arial\" font-size=\"16\" fill=\"%23475569\" text-anchor=\"middle\" dy=\".3em\"%3ELoading...%3C/text%3E%3C/svg%3E')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`; }).join(''); if(selectionMode){ document.querySelectorAll('.card-checkbox').forEach(cb=>{ cb.addEventListener('change',(e)=>{ e.stopPropagation(); const id=parseInt(cb.dataset.id); if(cb.checked) selectedCardIds.add(id); else selectedCardIds.delete(id); updateSelectedCount(); }); }); } document.querySelectorAll('.star-rating').forEach(div=>{ const mid=parseInt(div.dataset.id); const m=magnets.find(m=>m.id===mid); if(!m) return; const stars=div.querySelectorAll('i'); stars.forEach((star,idx)=>{ star.addEventListener('click',(e)=>{ e.stopPropagation(); let newRating=idx+1; if(m.rating===newRating) newRating=0; if(m.rating!==newRating){ m.rating=newRating; saveToDB().then(()=>{ updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); } }); }); }); document.querySelectorAll('.copy-magnet').forEach(btn=>btn.addEventListener('click',(e)=>{ e.stopPropagation(); copyMagnetLink(btn.getAttribute('data-magnet')); })); document.querySelectorAll('.preview-img').forEach(div=>{ div.addEventListener('click',(e)=>{ e.stopPropagation(); const url=div.getAttribute('data-img-url'); if(url) showImagePreview(url); }); }); document.querySelectorAll('.save-image-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const id= parseInt(btn.getAttribute('data-id')); await saveImageToLocal(id,false); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }); }); document.querySelectorAll('.send-pikpak-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const magnet = btn.getAttribute('data-magnet'); try { await sendToPikPakViaBridge(magnet); showToast('✅ 已发送到 PikPak，任务创建成功！'); } catch (err) { showToast('❌ ' + err.message, true); } }); }); bindMagnetLinkEvents(); for(const card of container.querySelectorAll('.magnet-card')){ const mid=parseInt(card.getAttribute('data-id')); const m=magnets.find(m=>m.id===mid); if(m){ const url=await getImageUrlForCard(m); const preview=card.querySelector('.preview-img'); if(preview){ preview.style.backgroundImage=`url(${url})`; preview.setAttribute('data-img-url',url); } } } const trigger=document.getElementById('loadMoreTrigger'); if(currentLoadedCount<allFilteredMagnets.length){ trigger.style.display='flex'; trigger.innerText='向下滚动加载更多...'; }else{ trigger.style.display='none'; } }
 
     // ========================== 多选及界面控制 ==========================
     function toggleSelectionMode(){ selectionMode=!selectionMode; const container=document.getElementById('magnetGridContainer'); const bar=document.getElementById('floatingBatchBar'); if(selectionMode){ container.classList.add('selection-mode'); if(selectedCardIds.size>0) bar.style.display='flex'; else bar.style.display='none'; lastSelectedCardId=null; }else{ container.classList.remove('selection-mode'); bar.style.display='none'; selectedCardIds.clear(); } renderLoadedCards(); }
@@ -821,34 +870,21 @@
                     console.log('[表单提交] 检测到网络图片，尝试下载:', imageUrl);
                     try {
                         let blob = null;
-                        // 1. 尝试扩展代理
                         if (window.__MAGNET_HELPER_EXTENSION__) {
-                            console.log('[表单提交] 使用扩展代理...');
                             try {
                                 blob = await fetchImageViaExtension(imageUrl);
-                                console.log('[表单提交] 扩展代理成功，blob大小:', blob.size);
                             } catch (e) {
                                 console.warn('[表单提交] 扩展代理失败:', e.message);
                             }
-                        } else {
-                            console.log('[表单提交] 扩展未安装，跳过代理');
                         }
-                        // 2. 如果扩展代理未成功，回退到标准 fetch
                         if (!blob) {
-                            console.log('[表单提交] 使用标准 fetch...');
                             const response = await fetch(imageUrl);
                             if (!response.ok) throw new Error(`HTTP ${response.status}`);
                             blob = await response.blob();
                         }
-                        // 3. 存储到 IndexedDB
                         if (blob) {
                             const newId = await storeImageBlob(imageUrl, blob);
-                            if (newId) {
-                                finalImageUrl = newId;
-                                console.log('[表单提交] 图片已存储，新ID:', newId);
-                            } else {
-                                throw new Error('存储失败');
-                            }
+                            if (newId) finalImageUrl = newId;
                         }
                     } catch(err) {
                         console.warn('[表单提交] 图片处理失败，保留原始URL:', err.message);
@@ -875,6 +911,142 @@
     function migrateOldRulesFromLocalStorage() { const oldKeys = ['magnet_manager_auto_tag_rules_v14','magnet_manager_auto_tag_rules_v13','magnet_manager_auto_tag_rules_v12','magnet_manager_auto_tag_rules_v11','magnet_manager_auto_tag_rules_v10','magnet_manager_auto_tag_rules_v9','magnet_manager_auto_tag_rules_v8','magnet_manager_auto_tag_rules_v7','magnet_manager_auto_tag_rules_v6','magnet_manager_auto_tag_rules_v5','magnet_manager_auto_tag_rules_v4','magnet_manager_auto_tag_rules_v3','magnet_manager_auto_tag_rules_v2','magnet_manager_auto_tag_rules_v1','magnet_manager_auto_tag_rules']; for (const key of oldKeys) { const old = localStorage.getItem(key); if (old) { try { const parsed = JSON.parse(old); if (Array.isArray(parsed) && parsed.length > 0) { autoTagRules = parsed; saveToDB().catch(console.error); showToast(`已自动迁移 ${autoTagRules.length} 条自动标签规则`); return; } } catch(e) {} } } }
     function initTheme() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark') { document.body.classList.add('dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } else { document.body.classList.remove('dark'); document.getElementById('themeToggleBtn').textContent = '🌙'; } }
     function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
+
+    // ================================================================
+    // ===== 新增：从扩展导入队列 + 自动导入 ==========================
+    // ================================================================
+
+    let autoImportTimer = null;
+    let autoImportIntervalMinutes = 10;
+
+    // 从扩展获取待导入队列
+    function fetchPendingFromExtension() {
+        return new Promise((resolve, reject) => {
+            const handler = (event) => {
+                if (event.data && event.data.type === 'PENDING_MAGNETS_RESULT') {
+                    window.removeEventListener('message', handler);
+                    if (event.data.success) {
+                        resolve({ data: event.data.data, total: event.data.total });
+                    } else {
+                        reject(new Error(event.data.error || '获取失败'));
+                    }
+                }
+            };
+            window.addEventListener('message', handler);
+            window.postMessage({ type: 'REQUEST_PENDING_MAGNETS' }, '*');
+            setTimeout(() => {
+                window.removeEventListener('message', handler);
+                reject(new Error('扩展未响应，请确保扩展已启用'));
+            }, 10000);
+        });
+    }
+
+    // 导入扩展队列（复用已有解析逻辑）
+    async function importFromExtension() {
+        try {
+            const result = await fetchPendingFromExtension();
+            if (!result.data || result.data.length === 0) {
+                showToast('扩展队列为空', false);
+                return;
+            }
+            // 转换为与剪贴板导入兼容的格式
+            const items = result.data.map(item => ({
+                title: item.title || '未知',
+                magnetLink: item.magnet,
+                size: item.size || '',
+                imageUrl: '' // 不携带图片，保持干净
+            }));
+            const newMagnets = [];
+            for (const src of items) {
+                const title = src.title || '';
+                const magnetLink = src.magnetLink || '';
+                const size = src.size || '';
+                if (magnets.some(m => m.magnetLink.toLowerCase() === magnetLink.toLowerCase())) continue;
+                let finalImageUrl = '';
+                const cleanedTitle = cleanTitle(title);
+                const newMagnet = {
+                    id: nextMagnetId++,
+                    magnetLink: magnetLink,
+                    title: cleanedTitle,
+                    imageUrl: finalImageUrl,
+                    size: size,
+                    tagIds: [],
+                    rating: 0,
+                    createdAt: Date.now()
+                };
+                applyAutoTagsToMagnet(newMagnet);
+                newMagnets.push(newMagnet);
+            }
+            if (newMagnets.length === 0) {
+                showToast('没有新的磁力链接（可能均已存在）', true);
+                return;
+            }
+            magnets.push(...newMagnets);
+            await saveToDB();
+            updateFilteredList();
+            currentLoadedCount = 0;
+            renderLoadedCards();
+            updateStats(allFilteredMagnets.length, magnets.length);
+            showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力`);
+            // 不清除扩展队列，由用户手动清空或保留
+        } catch (err) {
+            showToast('❌ 从扩展导入失败：' + err.message, true);
+        }
+    }
+
+    // 自动导入控制
+    function startAutoImport() {
+        const intervalInput = document.getElementById('autoImportInterval');
+        const minutes = parseInt(intervalInput.value) || 10;
+        if (minutes < 1) { alert('间隔至少 1 分钟'); return; }
+        autoImportIntervalMinutes = minutes;
+        if (autoImportTimer) clearInterval(autoImportTimer);
+        autoImportTimer = setInterval(() => {
+            console.log('[自动导入] 定时触发导入');
+            importFromExtension();
+        }, minutes * 60 * 1000);
+        const toggleBtn = document.getElementById('autoImportToggleBtn');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-pause"></i> 停止';
+            toggleBtn.style.background = '#ef4444';
+        }
+        const statusSpan = document.getElementById('autoImportStatus');
+        if (statusSpan) statusSpan.textContent = `⏳ 每 ${minutes} 分钟自动导入`;
+        localStorage.setItem('autoImportRunning', 'true');
+        localStorage.setItem('autoImportInterval', String(minutes));
+        showToast(`自动导入已启动，间隔 ${minutes} 分钟`);
+    }
+
+    function stopAutoImport() {
+        if (autoImportTimer) {
+            clearInterval(autoImportTimer);
+            autoImportTimer = null;
+        }
+        const toggleBtn = document.getElementById('autoImportToggleBtn');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-play"></i> 启动';
+            toggleBtn.style.background = '#10b981';
+        }
+        const statusSpan = document.getElementById('autoImportStatus');
+        if (statusSpan) statusSpan.textContent = '已停止';
+        localStorage.setItem('autoImportRunning', 'false');
+        showToast('自动导入已停止');
+    }
+
+    function toggleAutoImport() {
+        const toggleBtn = document.getElementById('autoImportToggleBtn');
+        if (!toggleBtn) return;
+        if (autoImportTimer) {
+            stopAutoImport();
+        } else {
+            startAutoImport();
+        }
+    }
+
+    // ================================================================
+    // ===== 原有事件绑定函数（新增导入相关按钮） ======================
+    // ================================================================
+
     function bindButtons() {
         // 菜单按钮
         document.getElementById('menuAddMagnet').onclick = openAddMagnet;
@@ -931,20 +1103,6 @@
         document.getElementById('deleteAllFailCardsBtn').onclick = deleteAllFailCards;
         document.getElementById('closeProgressBtn').onclick = () => hideProgressModal();
 
-        // ---- 刷新 Token 按钮 ----
-        document.getElementById('refreshTokenBtn').addEventListener('click', async () => {
-            // 通过扩展检测 Token 有效性
-            if (window.__MAGNET_HELPER_EXTENSION__) {
-                // 向 content script 请求重新获取 Token，并尝试一个简单的 API 调用
-                showToast('🔄 正在刷新 Token...');
-                // 实际上 content script 会在下一次请求时自动读取最新的 localStorage
-                // 这里我们只是通知用户
-                setTimeout(() => showToast('✅ Token 已刷新（请确保已登录 PikPak）'), 800);
-            } else {
-                showToast('⚠️ 扩展未启用，无法刷新 Token', true);
-            }
-        });
-
         // ---- 上传图片 ----
         document.getElementById('uploadImageBtn').addEventListener('click', () => {
             document.getElementById('imageFileInput').click();
@@ -969,6 +1127,16 @@
             }
             e.target.value = '';
         });
+
+        // ---- 新增：扩展导入按钮 ----
+        const importFromExtBtn = document.getElementById('importFromExtensionBtn');
+        if (importFromExtBtn) {
+            importFromExtBtn.onclick = importFromExtension;
+        }
+        const autoToggleBtn = document.getElementById('autoImportToggleBtn');
+        if (autoToggleBtn) {
+            autoToggleBtn.onclick = toggleAutoImport;
+        }
     }
 
     // ========================== 初始化 ==========================
@@ -1033,7 +1201,22 @@
             initTheme();
             renderFilterWordsList();
             document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
-            console.log('初始化完成，支持扩展代理下载 & PikPak 桥接');
+
+            // ---- 恢复自动导入状态 ----
+            const savedInterval = localStorage.getItem('autoImportInterval');
+            if (savedInterval) {
+                const intervalInput = document.getElementById('autoImportInterval');
+                if (intervalInput) intervalInput.value = savedInterval;
+            }
+            const autoRunning = localStorage.getItem('autoImportRunning') === 'true';
+            if (autoRunning) {
+                // 延迟一小段时间确保页面加载完成
+                setTimeout(() => {
+                    startAutoImport();
+                }, 500);
+            }
+
+            console.log('初始化完成，支持扩展代理下载 & PikPak 桥接 & 扩展队列导入');
         } catch(err){
             console.error(err);
             alert('初始化失败，请刷新页面重试。错误：'+err.message);
