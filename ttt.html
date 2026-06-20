@@ -449,16 +449,14 @@
             </button>
             <!-- 新增：自动导入控件 -->
             <div class="auto-import-group">
-    <input type="number" id="autoImportInterval" value="10" min="0.1" step="0.1" title="间隔分钟数（支持小数）">
-    <span style="font-size:0.8rem; color:var(--text-secondary);">分钟</span>
-    <button id="autoImportToggleBtn" class="btn" style="background:#10b981; color:white;">
-        <i class="fas fa-play"></i> 启动
-    </button>
-    <!-- 新增复选框 -->
-    <label style="font-size:0.8rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
-    <input type="checkbox" id="clearAfterImport" checked> 清空队列</label>
-    <span id="autoImportStatus" class="status-text">已停止</span>
-</div>
+                <input type="number" id="autoImportInterval" value="10" min="0.1" step="0.1" title="间隔分钟数（支持小数，如 0.3）">
+                <span style="font-size:0.8rem; color:var(--text-secondary);">分钟</span>
+                <button id="autoImportToggleBtn" class="btn" style="background:#10b981; color:white;">
+                    <i class="fas fa-play"></i> 启动
+                </button>
+                <span id="autoImportStatus" class="status-text">已停止</span>
+            </div>
+        </div>
         <!-- ===== 其余内容不变 ===== -->
         <div class="drag-area" id="tagsDragArea"><div class="drag-header" data-target="tagsContent"><div class="drag-title"><i class="fas fa-hashtag"></i> 🏷️ 拖拽标签可排序（点击筛选）</div><i class="fas fa-chevron-down toggle-icon"></i></div><div class="drag-content" id="tagsContent"><div id="draggableTagsList" class="tags-container"></div></div></div>
         <div class="filter-bar">
@@ -984,82 +982,56 @@
 
     // 导入扩展队列（复用已有解析逻辑）
     async function importFromExtension() {
-    try {
-        const result = await fetchPendingFromExtension();
-        if (!result.data || result.data.length === 0) {
-            showToast('扩展队列为空', false);
-            return;
+        try {
+            const result = await fetchPendingFromExtension();
+            if (!result.data || result.data.length === 0) {
+                showToast('扩展队列为空', false);
+                return;
+            }
+            // 转换为与剪贴板导入兼容的格式
+            const items = result.data.map(item => ({
+                title: item.title || '未知',
+                magnetLink: item.magnet,
+                size: item.size || '',
+                imageUrl: '' // 不携带图片，保持干净
+            }));
+            const newMagnets = [];
+            for (const src of items) {
+                const title = src.title || '';
+                const magnetLink = src.magnetLink || '';
+                const size = src.size || '';
+                if (magnets.some(m => m.magnetLink.toLowerCase() === magnetLink.toLowerCase())) continue;
+                let finalImageUrl = '';
+                const cleanedTitle = cleanTitle(title);
+                const newMagnet = {
+                    id: nextMagnetId++,
+                    magnetLink: magnetLink,
+                    title: cleanedTitle,
+                    imageUrl: finalImageUrl,
+                    size: size,
+                    tagIds: [],
+                    rating: 0,
+                    createdAt: Date.now()
+                };
+                applyAutoTagsToMagnet(newMagnet);
+                newMagnets.push(newMagnet);
+            }
+            if (newMagnets.length === 0) {
+                showToast('没有新的磁力链接（可能均已存在）', true);
+                return;
+            }
+            magnets.push(...newMagnets);
+            await saveToDB();
+            updateFilteredList();
+            currentLoadedCount = 0;
+            renderLoadedCards();
+            updateStats(allFilteredMagnets.length, magnets.length);
+            showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力`);
+            // 不清除扩展队列，由用户手动清空或保留
+        } catch (err) {
+            showToast('❌ 从扩展导入失败：' + err.message, true);
         }
-        // 转换为与剪贴板导入兼容的格式
-        const items = result.data.map(item => ({
-            title: item.title || '未知',
-            magnetLink: item.magnet,
-            size: item.size || '',
-            imageUrl: '' // 不携带图片，保持干净
-        }));
-        const newMagnets = [];
-        for (const src of items) {
-            const title = src.title || '';
-            const magnetLink = src.magnetLink || '';
-            const size = src.size || '';
-            if (magnets.some(m => m.magnetLink.toLowerCase() === magnetLink.toLowerCase())) continue;
-            let finalImageUrl = '';
-            const cleanedTitle = cleanTitle(title);
-            const newMagnet = {
-                id: nextMagnetId++,
-                magnetLink: magnetLink,
-                title: cleanedTitle,
-                imageUrl: finalImageUrl,
-                size: size,
-                tagIds: [],
-                rating: 0,
-                createdAt: Date.now()
-            };
-            applyAutoTagsToMagnet(newMagnet);
-            newMagnets.push(newMagnet);
-        }
-        if (newMagnets.length === 0) {
-            showToast('没有新的磁力链接（可能均已存在）', true);
-            return;
-        }
-        magnets.push(...newMagnets);
-        await saveToDB();
-        updateFilteredList();
-        currentLoadedCount = 0;
-        renderLoadedCards();
-        updateStats(allFilteredMagnets.length, magnets.length);
-
-        // ===== 根据复选框决定是否清空队列 =====
-        const clearAfter = document.getElementById('clearAfterImport')?.checked ?? false;
-if (clearAfter) {
-    try {
-        // 通过 postMessage 请求清空队列
-        const clearResult = await new Promise((resolve, reject) => {
-            const handler = (event) => {
-                if (event.data && event.data.type === 'CLEAR_PENDING_MAGNETS_RESULT') {
-                    window.removeEventListener('message', handler);
-                    if (event.data.success) {
-                        resolve(true);
-                    } else {
-                        reject(new Error(event.data.error || '清空失败'));
-                    }
-                }
-            };
-            window.addEventListener('message', handler);
-            window.postMessage({ type: 'REQUEST_CLEAR_PENDING_MAGNETS' }, '*');
-            // 设置超时
-            setTimeout(() => {
-                window.removeEventListener('message', handler);
-                reject(new Error('清空请求超时'));
-            }, 5000);
-        });
-        console.log('[自动导入] 扩展队列已清空');
-        showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，已清空队列`);
-    } catch (err) {
-        console.warn('[自动导入] 清空队列失败:', err.message);
-        showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，但清空队列失败`, true);
     }
-}
 
     // 自动导入控制
 function startAutoImport() {
