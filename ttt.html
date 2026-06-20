@@ -1031,28 +1031,33 @@
 
         // ===== 根据复选框决定是否清空队列 =====
         const clearAfter = document.getElementById('clearAfterImport')?.checked ?? false;
-        if (clearAfter) {
-            try {
-                await new Promise((resolve, reject) => {
-                    chrome.runtime.sendMessage({ action: 'clearPendingMagnets' }, (res) => {
-                        if (chrome.runtime.lastError) {
-                            reject(new Error(chrome.runtime.lastError.message));
-                        } else {
-                            resolve(res);
-                        }
-                    });
-                });
-                console.log('[自动导入] 扩展队列已清空');
-                showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，已清空队列`);
-            } catch (err) {
-                console.warn('[自动导入] 清空队列失败:', err.message);
-                showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，但清空队列失败`, true);
-            }
-        } else {
-            showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力（保留队列）`);
-        }
+if (clearAfter) {
+    try {
+        // 通过 postMessage 请求清空队列
+        const clearResult = await new Promise((resolve, reject) => {
+            const handler = (event) => {
+                if (event.data && event.data.type === 'CLEAR_PENDING_MAGNETS_RESULT') {
+                    window.removeEventListener('message', handler);
+                    if (event.data.success) {
+                        resolve(true);
+                    } else {
+                        reject(new Error(event.data.error || '清空失败'));
+                    }
+                }
+            };
+            window.addEventListener('message', handler);
+            window.postMessage({ type: 'REQUEST_CLEAR_PENDING_MAGNETS' }, '*');
+            // 设置超时
+            setTimeout(() => {
+                window.removeEventListener('message', handler);
+                reject(new Error('清空请求超时'));
+            }, 5000);
+        });
+        console.log('[自动导入] 扩展队列已清空');
+        showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，已清空队列`);
     } catch (err) {
-        showToast('❌ 从扩展导入失败：' + err.message, true);
+        console.warn('[自动导入] 清空队列失败:', err.message);
+        showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，但清空队列失败`, true);
     }
 }
 
