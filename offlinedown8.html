@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>磁力管理器 · GIS 同步（含库加载修复）</title>
+    <title>磁力管理器 · GIS 同步（修复库加载）</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
-    <!-- 使用两个 CDN 源加载 idb-free-sync，自动 fallback -->
-    <script src="https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js';"></script>
+    <!-- 使用正确的库版本和路径 -->
+    <script src="https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js"></script>
+    <!-- 备用源 -->
+    <script>
+        // 如果主库加载失败，尝试备用源
+        if (typeof window['idb-free-sync'] === 'undefined') {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://unpkg.com/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js';
+            document.head.appendChild(fallback);
+        }
+    </script>
     <style>
         /* ===== 样式（与之前保持一致） ===== */
         :root {
@@ -435,6 +444,12 @@
 
     function getAccessToken() { return accessToken; }
 
+    // 检查同步库是否加载
+    function isSyncLibLoaded() {
+        return (typeof window['idb-free-sync'] !== 'undefined' &&
+                typeof window['idb-free-sync'].createSync === 'function');
+    }
+
     // 初始化 Token Client
     function initTokenClient(clientId) {
         if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
@@ -471,12 +486,6 @@
             console.error('初始化 Token Client 失败:', e);
             return false;
         }
-    }
-
-    // 检查同步库是否加载
-    function isSyncLibLoaded() {
-        return (typeof window['idb-free-sync'] !== 'undefined' &&
-                typeof window['idb-free-sync'].createSync === 'function');
     }
 
     // 登录（用户点击触发）
@@ -518,13 +527,16 @@
             updateCloudStatus('offline', '无 token');
             return;
         }
+        
+        // 检查库是否加载，如果未加载则尝试动态加载
         if (!isSyncLibLoaded()) {
-            updateCloudStatus('offline', '同步库未加载');
-            // 尝试重新加载库
-            showToast('同步库未加载，尝试重新加载...', true);
-            await loadSyncLibrary();
-            if (!isSyncLibLoaded()) {
-                alert('同步库加载失败，请检查网络连接后刷新页面重试。');
+            updateCloudStatus('offline', '同步库加载中...');
+            showToast('正在加载同步库...', false);
+            const loaded = await loadSyncLibrary();
+            if (!loaded) {
+                updateCloudStatus('offline', '同步库加载失败');
+                alert('同步库加载失败，请检查网络连接后刷新页面重试。\n\n提示：您可以在控制台运行以下命令测试加载：\n' +
+                      'const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js";document.head.appendChild(s);');
                 return;
             }
         }
@@ -587,28 +599,52 @@
         }
     }
 
-    // 动态加载同步库（fallback）
+    // 动态加载同步库（使用正确的版本和路径）
     function loadSyncLibrary() {
-        return new Promise((resolve, reject) => {
-            if (isSyncLibLoaded()) { resolve(); return; }
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js';
-            script.onload = () => {
-                if (isSyncLibLoaded()) resolve();
-                else reject(new Error('加载后库仍未定义'));
-            };
-            script.onerror = () => {
-                // 尝试备用源
-                const fallback = document.createElement('script');
-                fallback.src = 'https://unpkg.com/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js';
-                fallback.onload = () => {
-                    if (isSyncLibLoaded()) resolve();
-                    else reject(new Error('备用源加载失败'));
+        return new Promise((resolve) => {
+            // 如果已经加载，直接返回
+            if (isSyncLibLoaded()) { resolve(true); return; }
+            
+            // 尝试多个 CDN 源
+            const sources = [
+                'https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js',
+                'https://unpkg.com/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/idb-free-sync/0.1.1/idb-free-sync.min.js'
+            ];
+            
+            let currentIndex = 0;
+            
+            function tryLoad() {
+                if (currentIndex >= sources.length) {
+                    console.error('所有 CDN 源均加载失败');
+                    resolve(false);
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = sources[currentIndex];
+                script.onload = () => {
+                    // 检查是否加载成功
+                    setTimeout(() => {
+                        if (isSyncLibLoaded()) {
+                            console.log(`✅ 同步库从 ${sources[currentIndex]} 加载成功`);
+                            resolve(true);
+                        } else {
+                            // 加载了但未定义，继续尝试下一个
+                            currentIndex++;
+                            tryLoad();
+                        }
+                    }, 500);
                 };
-                fallback.onerror = () => reject(new Error('所有 CDN 源均加载失败'));
-                document.head.appendChild(fallback);
-            };
-            document.head.appendChild(script);
+                script.onerror = () => {
+                    console.warn(`❌ 从 ${sources[currentIndex]} 加载失败，尝试下一个...`);
+                    currentIndex++;
+                    tryLoad();
+                };
+                document.head.appendChild(script);
+            }
+            
+            tryLoad();
         });
     }
 
