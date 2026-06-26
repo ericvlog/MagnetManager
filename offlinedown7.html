@@ -8,8 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        /* ===== 样式与之前一致，为节省篇幅此处省略，但实际替换时需保留完整样式 ===== */
-        /* 备注：实际使用时应包含完整样式，因篇幅限制，此处仅作示意，最终输出将包含所有样式。 */
+        /* ===== 完整样式（与之前一致） ===== */
         :root {
             --bg-body: #f1f5f9;
             --bg-sidebar: white;
@@ -450,7 +449,7 @@
         }
         .batch-item .status-badge.success { background: #10b981; color: white; }
         .batch-item .status-badge.error { background: #ef4444; color: white; }
-        /* ===== 卡片预览弹窗样式 ===== */
+        /* ===== 卡片预览弹窗样式（自包含） ===== */
         .card-preview-overlay {
             position: fixed;
             top: 0;
@@ -680,12 +679,12 @@
                 <div class="menu-item" id="menuConvertAllImagesToLocal"><i class="fas fa-database"></i><span>📦 一键转换所有图片到本地</span></div>
                 <div class="menu-item" id="menuViewFailList"><i class="fas fa-list-ul"></i><span>⚠️ 查看转换失败列表</span></div>
                 <div class="menu-item" id="menuViewFailedPreviews"><i class="fas fa-exclamation-triangle"></i><span>⚠️ 预览失败（429）</span></div>
-                <div class="menu-item" id="menuAutoHideSettings"><i class="fas fa-clock"></i><span>⚙️ 自动隐藏设置</span></div>
                 <div class="menu-item" id="menuFullBackupWithImages"><i class="fas fa-archive"></i><span>💾 完整备份（含图片）</span></div>
                 <div class="menu-item" id="menuFullRestoreWithImages"><i class="fas fa-folder-open"></i><span>📂 恢复完整备份</span></div>
                 <div class="menu-item" id="menuRestoreImagesFromFolder"><i class="fas fa-folder-open"></i><span>📁 从文件夹导入图片</span></div>
                 <div class="menu-item" id="menuExportData"><i class="fas fa-download"></i><span>💾 导出数据(单文件)</span></div>
                 <div class="menu-item" id="menuImportData"><i class="fas fa-upload"></i><span>📂 导入数据(单文件)</span></div>
+                <!-- 已移除 保存到 data 文件夹 和 从 data 文件夹加载 -->
                 <div class="menu-item" id="menuResetData"><i class="fas fa-trash-alt"></i><span>🗑️ 重置所有数据</span></div>
             </details></div>
         </div>
@@ -693,7 +692,7 @@
     <div class="main-content">
         <div class="top-actions">
             <button id="hideImageBtn" class="hide-image-btn"><i class="fas fa-image"></i> 隐藏图片</button>
-            <button class="btn btn-primary" id="topAddMagnetBtn">➕ 添加磁力</button>
+            <button class="btn btn-success" id="topAddMagnetBtn">➕ 添加磁力</button>
             <button class="btn btn-success" id="topImportClipboardBtn">📋 从剪贴板导入</button>
             <button id="importFromExtensionBtn" class="btn" style="background:#306eff;color:white;"><i class="fas fa-cloud-download-alt"></i> 从扩展导入队列</button>
             <div class="auto-import-group">
@@ -730,43 +729,11 @@
 <div id="batchTagModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>批量添加标签</h3><button id="closeBatchTagModalBtn" class="icon-btn">✖</button></div><div class="batch-tag-selector"><div id="batchTagSelectorContainer" style="max-height:300px;overflow-y:auto;border:1px solid var(--border-color);border-radius:16px;padding:8px;"></div><div style="margin-top:1rem;display:flex;gap:8px;justify-content:flex-end;"><button id="confirmBatchTagsBtn" class="btn btn-primary">添加标签</button><button id="cancelBatchTagsBtn" class="btn btn-outline">取消</button></div></div></div></div>
 <div id="autoTagRuleModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>自动标签规则</h3><button id="closeRuleModalBtn" class="icon-btn">✖</button></div><div class="rule-editor"><div id="rulesListContainer" style="max-height:300px;overflow-y:auto;"></div><div style="margin-top:1rem;"><input type="text" id="newRuleKeyword" placeholder="关键词 (如 4K)" style="width:48%;display:inline-block;margin-right:2%;"><select id="newRuleTagSelect" style="width:48%;display:inline-block;"></select><button id="addRuleBtn" class="btn btn-primary" style="margin-top:0.5rem;width:100%;">添加规则</button></div></div></div></div>
 <div id="duplicateModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>清理重复项</h3><button id="closeDuplicateModalBtn" class="icon-btn">✖</button></div><div class="duplicate-list"><div class="duplicate-mode-selector"><span>检测模式：</span><label><input type="radio" name="dupMode" value="magnet" checked> 按磁力链接</label><label><input type="radio" name="dupMode" value="title"> 按标题</label></div><div class="similarity-control" id="similarityControl"><span>相似度阈值：</span><input type="range" id="similaritySlider" min="70" max="100" value="80" step="1"><span id="similarityValue">80%</span><span style="font-size:0.7rem;"> (仅按标题模式)</span></div><div id="duplicateGroupsContainer"></div><div style="display:flex;justify-content:flex-end;gap:12px;margin-top:1rem;"><button id="applyDuplicateResolutionBtn" class="btn btn-primary">全局应用</button><button id="cancelDuplicateBtn" class="btn btn-outline">取消</button></div></div></div></div>
-<div id="batchAddModal" class="modal"><div class="modal-card" style="max-width:850px;"><div class="flex-between"><h3>📥 批量添加磁力</h3><button id="closeBatchAddModalBtn" class="icon-btn">✖</button></div><div style="padding:1rem;"><div style="margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><span style="font-size:0.9rem; color:var(--text-secondary);">📋 粘贴多个磁力链接（每行一个）</span></div><div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;"><textarea id="batchMagnetInput" placeholder="每行一个磁力链接" style="flex:1;min-height:100px;padding:8px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);font-family:monospace;"></textarea><div style="display:flex;flex-direction:column;gap:6px;justify-content:center;"><button id="parseBatchBtn" class="btn btn-primary">🔍 解析</button><button id="clearBatchInputBtn" class="btn btn-outline">清空</button></div></div><div id="batchParseResult" style="margin-top:12px;max-height:55vh;overflow-y:auto;border:1px solid var(--border-color);border-radius:12px;padding:8px;display:none;"><div id="batchItemList"></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color);"><button id="batchOfflineAllBtn" class="btn btn-primary">📥 全部离线</button><button id="batchSaveAllBtn" class="btn btn-success">💾 全部保存</button><button id="batchBothAllBtn" class="btn btn-primary" style="background:#0f3b3f;">⚡ 全部离线并保存</button><button id="batchDeleteAllBtn" class="btn btn-danger">🗑️ 全部删除</button></div></div></div></div>
-
-<!-- ===== 自动隐藏设置模态框 ===== -->
-<div id="autoHideModal" class="modal">
-    <div class="modal-card" style="max-width: 450px;">
-        <div class="flex-between">
-            <h3>⚙️ 自动隐藏图片设置</h3>
-            <button id="closeAutoHideModalBtn" class="icon-btn">✖</button>
-        </div>
-        <div style="padding: 1.2rem 1.5rem;">
-            <div style="margin-bottom: 1rem;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="autoHideEnabledCheckbox"> 启用自动隐藏
-                </label>
-                <div style="margin-top: 8px;">
-                    <label>无操作后 <input type="number" id="autoHideTimeoutInput" min="5" max="600" step="5" value="30" style="width: 70px;"> 秒自动隐藏图片</label>
-                </div>
-                <div style="margin-top: 12px; font-size: 0.8rem; color: var(--text-secondary);">
-                    💡 鼠标移动、点击或按键时会自动显示图片并重置计时器。
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
-                <button id="saveAutoHideBtn" class="btn btn-primary">保存设置</button>
-                <button id="closeAutoHideModalBtn2" class="btn btn-outline">关闭</button>
-            </div>
-        </div>
-    </div>
-</div>
+<div id="batchAddModal" class="modal"><div class="modal-card" style="max-width:850px;"><div class="flex-between"><h3>📥 批量添加磁力</h3><button id="closeBatchAddModalBtn" class="icon-btn">✖</button></div><div style="padding:1rem;"><div style="margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><span style="font-size:0.9rem; color:var(--text-secondary);">📋 粘贴多个磁力链接（每行一个）</span></div><div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;"><textarea id="batchMagnetInput" placeholder="每行一个磁力链接" style="flex:1;min-height:100px;padding:8px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);font-family:monospace;"></textarea><div style="display:flex;flex-direction:column;gap:6px;justify-content:center;"><button id="parseBatchBtn" class="btn btn-primary">🔍 解析</button><button id="clearBatchInputBtn" class="btn btn-outline">清空</button></div></div><div id="batchParseResult" style="margin-top:12px;max-height:55vh;overflow-y:auto;border:1px solid var(--border-color);border-radius:12px;padding:8px;display:none;"><div id="batchItemList"></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color);"><button id="batchOfflineAllBtn" class="btn btn-primary">📥 全部离线</button><button id="batchSaveAllBtn" class="btn btn-success">💾 全部保存</button><button id="batchBothAllBtn" class="btn btn-primary" style="background:#0f3b3f;">⚡ 全部离线并保存</button><button id="batchDeleteAllBtn" class="btn btn-danger">🗑️ 全部删除</button></div></div></div></div></div>
 
 <script>
-// =====================================================================
-// 完整 JavaScript 逻辑（修复自动隐藏，移除 saveToFolder/loadFromFolder）
-// =====================================================================
 (function(){
-    'use strict';
-
-    // ------------------------------ 基础配置 ------------------------------
+    // ========================== 基础配置 ==========================
     const DB_NAME = 'MagnetManagerDB';
     const DB_VERSION = 6;
     const STORES = { tags: 'tags', magnets: 'magnets', autoTagRules: 'autoTagRules', filterWords: 'filterWords', images: 'images', failList: 'failList' };
@@ -793,12 +760,7 @@
     let imageBlobCache = new Map();
     let batchItems = [];
 
-    // 自动隐藏相关
-    let autoHideTimer = null;
-    let autoHideSettings = { enabled: false, timeout: 30 };
-    let manualHide = false;
-
-    // ------------------------------ 工具函数 ------------------------------
+    // ===== 工具函数 =====
     function cleanTitle(title) { if (!title) return title; let newTitle = title; for (const word of filterWords) { if (!word) continue; newTitle = newTitle.split(word).join(''); } return newTitle.trim(); }
     function escapeHtml(s) { return s ? s.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;') : ''; }
     function showToast(msg, isError = false) { const t = document.createElement('div'); t.className='copy-toast'; t.textContent=msg; t.style.background = isError ? '#ef4444' : '#10b981'; document.body.appendChild(t); setTimeout(()=>t.remove(),2000); }
@@ -815,7 +777,7 @@
     function sortTagsByOrder() { if (!tagOrder || tagOrder.length === 0) return; const orderMap = new Map(); tagOrder.forEach((id, idx) => orderMap.set(id, idx)); tags.sort((a, b) => (orderMap.get(a.id) ?? Infinity) - (orderMap.get(b.id) ?? Infinity)); }
     function updateTagOrderFromTags() { tagOrder = tags.map(t => t.id); saveTagOrder(); }
 
-    // ------------------------------ IndexedDB 操作 ------------------------------
+    // ===== IndexedDB 操作 =====
     function openDB() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, DB_VERSION); request.onerror = () => reject(request.error); request.onsuccess = () => { db = request.result; resolve(db); }; request.onupgradeneeded = (event) => { const db = event.target.result; if (!db.objectStoreNames.contains(STORES.tags)) db.createObjectStore(STORES.tags, { keyPath: 'id' }); if (!db.objectStoreNames.contains(STORES.magnets)) db.createObjectStore(STORES.magnets, { keyPath: 'id' }); if (!db.objectStoreNames.contains(STORES.autoTagRules)) db.createObjectStore(STORES.autoTagRules, { keyPath: 'id', autoIncrement: true }); if (!db.objectStoreNames.contains(STORES.filterWords)) db.createObjectStore(STORES.filterWords, { keyPath: 'id', autoIncrement: true }); if (!db.objectStoreNames.contains(STORES.images)) db.createObjectStore(STORES.images, { keyPath: 'id' }); if (!db.objectStoreNames.contains(STORES.failList)) db.createObjectStore(STORES.failList, { keyPath: 'cardId' }); }; }); }
     function saveFilterWordsToDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.filterWords], 'readwrite'); const store = tx.objectStore(STORES.filterWords); const clearReq = store.clear(); clearReq.onsuccess = () => { let completed = 0; if (filterWords.length === 0) { resolve(); return; } for (let i = 0; i < filterWords.length; i++) { const req = store.put({ id: i, word: filterWords[i] }); req.onsuccess = () => { completed++; if (completed === filterWords.length) resolve(); }; req.onerror = (e) => reject(e.target.error); } }; clearReq.onerror = (e) => reject(e.target.error); }); }
     function loadFilterWordsFromDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.filterWords], 'readonly'); const store = tx.objectStore(STORES.filterWords); const req = store.getAll(); req.onsuccess = () => { filterWords = req.result.map(item => item.word).filter(w => w && w.trim() !== ''); resolve(); }; req.onerror = (e) => reject(e.target.error); }); }
@@ -827,16 +789,16 @@
     async function getImageBlob(imageId) { if (!db) return null; if (imageBlobCache.has(imageId)) return imageBlobCache.get(imageId); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readonly'); const store = tx.objectStore(STORES.images); const req = store.get(imageId); req.onsuccess = () => { if (req.result && req.result.blob) { imageBlobCache.set(imageId, req.result.blob); resolve(req.result.blob); } else { resolve(null); } }; req.onerror = (e) => reject(e.target.error); }); }
     async function getImageUrlForCard(magnet) { if (!magnet.imageUrl) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3ENo Preview%3C/text%3E%3C/svg%3E'; if (magnet.imageUrl.startsWith('img_')) { const blob = await getImageBlob(magnet.imageUrl); if (blob) return URL.createObjectURL(blob); else return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3EMissing%3C/text%3E%3C/svg%3E'; } return magnet.imageUrl; }
 
-    // ------------------------------ 扩展代理 & 图片保存 ------------------------------
+    // ===== 扩展代理 & 图片保存 =====
     function fetchImageViaExtension(url) { return new Promise((resolve, reject) => { if (!window.__MAGNET_HELPER_EXTENSION__) { reject(new Error('扩展未安装')); return; } const handler = (event) => { if (event.data.type === 'IMAGE_DOWNLOAD_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve(event.data.blob); } else { reject(new Error(event.data.error || '扩展下载失败')); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_IMAGE_DOWNLOAD', url: url, referer: window.location.href }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('扩展未响应，请检查扩展是否启用')); }, 15000); }); }
     async function saveImageToLocal(magnetId, skipToast = false, retryOn429 = true) { const magnet = magnets.find(m => m.id === magnetId); if (!magnet || !magnet.imageUrl) { if(!skipToast) showToast('没有可保存的图片', true); return false; } if (magnet.imageUrl.startsWith('img_')) { if(!skipToast) showToast('图片已经是本地存储', false); return false; } let blob = null; let fromExtension = false; if (window.__MAGNET_HELPER_EXTENSION__) { try { if(!skipToast) showToast('使用扩展代理下载...', false); blob = await fetchImageViaExtension(magnet.imageUrl); fromExtension = true; } catch (extError) { if(!skipToast) showToast(`扩展代理失败: ${extError.message}，尝试标准下载`, true); } } if (!blob) { const fetchWithRetry = async (retry = true) => { const controller = new AbortController(); const timeoutId = setTimeout(() => controller.abort(), 30000); try { const response = await fetch(magnet.imageUrl, { mode: 'cors', referrerPolicy: 'unsafe-url', cache: 'reload', signal: controller.signal }); clearTimeout(timeoutId); if (!response.ok) { if (retry && response.status === 429) { await new Promise(r => setTimeout(r, 2000)); return fetchWithRetry(false); } throw new Error(`HTTP ${response.status} ${response.statusText}`); } const contentType = response.headers.get('content-type'); if (!contentType || !contentType.startsWith('image/')) throw new Error(`非图片类型: ${contentType}`); const responseBlob = await response.blob(); if (responseBlob.size === 0) throw new Error('图片大小为0'); return responseBlob; } catch(e) { clearTimeout(timeoutId); throw e; } }; try { blob = await fetchWithRetry(retryOn429); } catch (e) { let reason = e.message; if(!skipToast) showToast(`标准下载失败: ${reason}`, true); const existing = failList.find(f => f.cardId === magnetId); if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason }); else existing.reason = reason; await saveFailListToDB(); return false; } } try { const newId = await storeImageBlob(magnet.imageUrl, blob); if (newId) { magnet.imageUrl = newId; await saveToDB(); const idx = failList.findIndex(f => f.cardId === magnetId); if (idx !== -1) { failList.splice(idx, 1); await saveFailListToDB(); } updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); if(!skipToast) showToast('图片已保存到本地，链接永不过期' + (fromExtension ? ' (通过扩展代理)' : '')); return true; } else { throw new Error('存储到IndexedDB失败'); } } catch (e) { let reason = e.message; if(!skipToast) showToast(`存储失败: ${reason}`, true); const existing = failList.find(f => f.cardId === magnetId); if (!existing) failList.push({ title: magnet.title, url: magnet.imageUrl, cardId: magnet.id, reason: reason }); else existing.reason = reason; await saveFailListToDB(); return false; } }
 
-    // ------------------------------ PikPak 桥接 ------------------------------
+    // ===== PikPak 桥接 =====
     let _pikpakBridgeOpened = false;
     function sendToPikPakViaBridge(magnetLink) { return new Promise((resolve, reject) => { if (window.__MAGNET_HELPER_EXTENSION__) { console.log('[PikPak桥接] 使用扩展代理'); const handler = (event) => { if (event.data && event.data.type === 'PIKPAK_OFFLINE_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve(event.data.data); } else { if (event.data.code === 'TOKEN_EXPIRED') { alert('⚠️ PikPak Token 已过期，请打开 PikPak 页面重新登录，然后刷新管理器页面。'); } reject(new Error(event.data.error)); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_PIKPAK_OFFLINE', magnet: magnetLink }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('扩展未响应，请确认扩展已启用')); }, 15000); return; } console.log('[PikPak桥接] 使用 opener 方式（油猴桥接）'); if (!window.opener && !window.parent && !_pikpakBridgeOpened) { _pikpakBridgeOpened = true; const newWindow = window.open('https://mypikpak.com', '_blank'); if (newWindow) { setTimeout(() => { _pikpakBridgeOpened = false; sendToPikPakViaBridge(magnetLink).then(resolve).catch(reject); }, 3000); } else { reject(new Error('请先手动打开 PikPak 网页 (https://mypikpak.com) 并保持登录')); } return; } const target = window.opener || window.parent || window; doSend(target, magnetLink, resolve, reject); }); }
     function doSend(target, magnetLink, resolve, reject) { let timeoutId = null; const handler = (event) => { if (event.data && event.data.type === 'OFFLINE_RESULT') { if (timeoutId) clearTimeout(timeoutId); window.removeEventListener('message', handler); if (event.data.success) { resolve(event.data.data); } else { reject(new Error(event.data.error)); } } }; window.addEventListener('message', handler); target.postMessage({ type: 'OFFLINE_TO_PIKPAK', magnet: magnetLink }, '*'); timeoutId = setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('桥接超时，请确认油猴桥接脚本已启用')); }, 15000); }
 
-    // ------------------------------ 自动标签规则 ------------------------------
+    // ===== 自动标签规则 =====
     function getAutoTagsForTitle(title) { if (!title) return []; const lowerTitle = title.toLowerCase(); const matched = new Set(); for (const rule of autoTagRules) if (lowerTitle.includes(rule.keyword.toLowerCase())) matched.add(rule.tagId); return Array.from(matched); }
     function applyAutoTagsToMagnet(magnet) { if (!magnet.title) return; const autoIds = getAutoTagsForTitle(magnet.title); for (const tid of autoIds) if (!magnet.tagIds.includes(tid)) magnet.tagIds.push(tid); }
     async function applyAutoTagsToAllMagnets() { let changed = 0; for (const m of magnets) { const before = m.tagIds.length; applyAutoTagsToMagnet(m); if (m.tagIds.length !== before) changed++; } if (changed > 0) { await saveToDB(); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); showToast(`已应用规则，为 ${changed} 个卡片添加了标签`); } else showToast('没有卡片需要添加标签'); }
@@ -845,12 +807,12 @@
     function openAutoTagRuleModal() { refreshRuleTagSelect(); renderRulesList(); document.getElementById('autoTagRuleModal').style.display = 'flex'; }
     async function addRule() { const keyword = document.getElementById('newRuleKeyword').value.trim(); const tagId = parseInt(document.getElementById('newRuleTagSelect').value); if (!keyword) { alert('请输入关键词'); return; } if (!tagId) { alert('请选择标签'); return; } autoTagRules.push({ keyword, tagId }); await saveToDB(); document.getElementById('newRuleKeyword').value = ''; renderRulesList(); showToast('规则已添加'); }
 
-    // ------------------------------ 标签拖拽 ------------------------------
+    // ===== 标签拖拽 =====
     function initTagDragSort() { const container = document.getElementById('draggableTagsList'); if (!container) return; container.querySelectorAll('.drag-tag').forEach(tag => { tag.setAttribute('draggable', 'true'); tag.ondragstart = (e) => { dragSrcIndex = parseInt(tag.getAttribute('data-index')); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'tag_sort', id: tag.getAttribute('data-id') })); e.dataTransfer.setDragImage(tag, 0, 0); tag.classList.add('dragging'); }; tag.ondragend = (e) => { tag.classList.remove('dragging'); dragSrcIndex = null; }; tag.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }; tag.ondrop = async (e) => { e.preventDefault(); const targetIndex = parseInt(tag.getAttribute('data-index')); if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) { const [movedTag] = tags.splice(dragSrcIndex, 1); tags.splice(targetIndex, 0, movedTag); updateTagOrderFromTags(); await saveToDB(); renderDraggable(); initTagDragSort(); showToast('标签顺序已更新'); } }; }); }
     function renderDraggable() { const container = document.getElementById('draggableTagsList'); if (!container) return; container.innerHTML = ''; tags.forEach((tag, idx) => { const el = document.createElement('div'); el.className = 'drag-tag'; el.textContent = `# ${tag.name}`; el.setAttribute('data-id', tag.id); el.setAttribute('data-index', idx); el.setAttribute('draggable', 'true'); el.ondragstart = (e) => { dragSrcIndex = idx; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'tag_sort', id: tag.id })); e.dataTransfer.setDragImage(el, 0, 0); el.classList.add('dragging'); }; el.ondragend = (e) => { el.classList.remove('dragging'); dragSrcIndex = null; }; el.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }; el.ondrop = async (e) => { e.preventDefault(); const targetIndex = idx; if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) { const [movedTag] = tags.splice(dragSrcIndex, 1); tags.splice(targetIndex, 0, movedTag); updateTagOrderFromTags(); await saveToDB(); renderDraggable(); initTagDragSort(); showToast('标签顺序已更新'); } }; el.onclick = (e) => { e.stopPropagation(); filterByTag(tag.name); }; container.appendChild(el); }); initTagDragSort(); }
     function renderTagManagementList() { const container = document.getElementById('tagList'); if (!container) return; if (tags.length === 0) { container.innerHTML = '<div style="text-align:center;color:#64748b;">暂无标签</div>'; return; } container.innerHTML = tags.map(t => `<div class="flex-between"><span>🏷️ ${escapeHtml(t.name)}</span><button class="icon-btn delete-tag-mgr" data-id="${t.id}">🗑️</button></div>`).join(''); container.querySelectorAll('.delete-tag-mgr').forEach(btn => { btn.onclick = async () => { const id = parseInt(btn.dataset.id); if (confirm('删除标签将从所有卡片中移除，确定？')) { tags = tags.filter(t => t.id !== id); magnets = magnets.map(m => ({ ...m, tagIds: m.tagIds.filter(tid => tid !== id) })); tagOrder = tagOrder.filter(tid => tid !== id); saveTagOrder(); await saveToDB(); renderDraggable(); renderTagManagementList(); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); refreshRuleTagSelect(); renderRulesList(); } }; }); }
 
-    // ------------------------------ 重复清理 ------------------------------
+    // ===== 重复清理 =====
     let duplicateGroups = [];
     function stringSimilarity(s1,s2) { if(!s1||!s2)return 0; if(s1===s2)return 1; s1=s1.trim().toLowerCase(); s2=s2.trim().toLowerCase(); const len1=s1.length,len2=s2.length; if(len1===0||len2===0)return 0; const set1=new Set(s1.split('')), set2=new Set(s2.split('')); const common=[...set1].filter(c=>set2.has(c)).length; const charSim=common*2/(set1.size+set2.size); const lengthRatio=Math.min(len1,len2)/Math.max(len1,len2); return (charSim+lengthRatio)/2; }
     function findDuplicateGroups(mode, threshold=0.8) { if(mode==='magnet'){ const groups=new Map(); for(const m of magnets){ const key=m.magnetLink?m.magnetLink.toLowerCase():''; if(!key)continue; if(!groups.has(key)) groups.set(key,[]); groups.get(key).push(m); } const result=[]; for(const [key,items] of groups.entries()) if(items.length>1) result.push({key,items,selectedIndices:new Set(items.map((_,idx)=>idx))}); return result; } else { const used=new Set(), groups=[]; for(let i=0;i<magnets.length;i++){ if(used.has(i)) continue; const base=magnets[i]; const baseTitle=base.title?.trim().toLowerCase()||''; if(!baseTitle) continue; const group=[base]; used.add(i); for(let j=i+1;j<magnets.length;j++){ if(used.has(j)) continue; const other=magnets[j]; const otherTitle=other.title?.trim().toLowerCase()||''; if(!otherTitle) continue; if(stringSimilarity(baseTitle,otherTitle)>=threshold){ group.push(other); used.add(j); } } if(group.length>1) groups.push({key:baseTitle,items:group,selectedIndices:new Set(group.map((_,idx)=>idx))}); } return groups; } }
@@ -860,119 +822,23 @@
     function openDuplicateModal(){ const mode=document.querySelector('input[name="dupMode"]:checked').value; let thres=0.8; if(mode==='title'){ const slider=document.getElementById('similaritySlider'); if(slider) thres=parseFloat(slider.value)/100; document.getElementById('similarityControl').style.display='flex'; }else{ document.getElementById('similarityControl').style.display='none'; } const groups=findDuplicateGroups(mode,thres); duplicateGroups=groups; renderDuplicateModal(groups); document.getElementById('duplicateModal').style.display='flex'; }
     function bindDuplicateModalEvents(){ const radios=document.querySelectorAll('input[name="dupMode"]'); radios.forEach(radio=>{ radio.addEventListener('change',()=>{ const newMode=document.querySelector('input[name="dupMode"]:checked').value; const slider=document.getElementById('similaritySlider'); if(newMode==='title'){ document.getElementById('similarityControl').style.display='flex'; const thres=slider?parseFloat(slider.value)/100:0.8; const groups=findDuplicateGroups('title',thres); duplicateGroups=groups; renderDuplicateModal(groups); }else{ document.getElementById('similarityControl').style.display='none'; const groups=findDuplicateGroups('magnet'); duplicateGroups=groups; renderDuplicateModal(groups); } }); }); const slider=document.getElementById('similaritySlider'); if(slider){ let timeout; slider.addEventListener('input',(e)=>{ document.getElementById('similarityValue').innerText=e.target.value+'%'; if(timeout) clearTimeout(timeout); timeout=setTimeout(()=>{ const val=parseFloat(slider.value)/100; const mode=document.querySelector('input[name="dupMode"]:checked').value; if(mode==='title'){ const groups=findDuplicateGroups('title',val); duplicateGroups=groups; renderDuplicateModal(groups); } },300); }); } document.getElementById('applyDuplicateResolutionBtn').onclick=()=>{ if(duplicateGroups&&duplicateGroups.length>0) resolveAllDuplicates(duplicateGroups); else showToast('没有重复项需要清理',true); document.getElementById('duplicateModal').style.display='none'; }; document.getElementById('cancelDuplicateBtn').onclick=()=>document.getElementById('duplicateModal').style.display='none'; document.getElementById('closeDuplicateModalBtn').onclick=()=>document.getElementById('duplicateModal').style.display='none'; }
 
-    // ------------------------------ 批量复制 ------------------------------
+    // ===== 批量复制 =====
     function disableCardMagnetLinks(){ const links=document.querySelectorAll('.magnet-link'); originalHrefs=[]; links.forEach(link=>{ if(link.getAttribute('href')&&link.getAttribute('href').startsWith('magnet:')){ originalHrefs.push({link,href:link.getAttribute('href'),display:link.style.display}); link.removeAttribute('href'); link.style.display='none'; } }); }
     function restoreCardMagnetLinks(){ originalHrefs.forEach(item=>{ item.link.setAttribute('href',item.href); item.link.style.display=item.display||''; item.link.style.cursor='pointer'; item.link.style.opacity=''; item.link.title=''; }); originalHrefs=[]; }
     function batchCopyLinksWithModal(){ if(selectedCardIds.size===0){ alert('请先选择卡片'); return; } const links=[]; for(const id of selectedCardIds){ const m=magnets.find(m=>m.id===id); if(m&&m.magnetLink) links.push(m.magnetLink); } if(links.length===0){ alert('没有可复制的链接'); return; } disableCardMagnetLinks(); const container=document.getElementById('batchLinksContainer'); container.innerHTML=''; links.forEach(link=>{ const a=document.createElement('a'); a.href=link; a.className='batch-link-item'; a.textContent=link; a.title='点击调用 PikPak 扩展或系统处理程序'; container.appendChild(a); }); document.getElementById('batchCopyModal').style.display='flex'; }
     function bindModalRestore(){ const modal=document.getElementById('batchCopyModal'); const closeBtn=document.getElementById('closeBatchCopyModalBtn'); const cancelBtn=document.getElementById('cancelBatchCopyBtn'); const restore=()=>{ modal.style.display='none'; restoreCardMagnetLinks(); }; closeBtn.onclick=restore; cancelBtn.onclick=restore; modal.addEventListener('click',(e)=>{if(e.target===modal) restore();}); }
     function bindMagnetLinkEvents(){ document.querySelectorAll('.magnet-link').forEach(el=>{ if(el.hasAttribute('data-bound')) return; el.setAttribute('data-bound','true'); const url=el.getAttribute('href'); if(!url) return; el.addEventListener('click',(e)=>{ copyMagnetLink(url); }); }); }
+    function initHideImageButton(){ const btn=document.getElementById('hideImageBtn'); btn.addEventListener('click',()=>{ document.body.classList.toggle('hide-images'); const hidden=document.body.classList.contains('hide-images'); btn.innerHTML=hidden?'<i class="fas fa-eye"></i> 显示图片':'<i class="fas fa-image"></i> 隐藏图片'; }); }
 
-    // ------------------------------ 隐藏图片按钮 ------------------------------
-    function initHideImageButton() {
-        const btn = document.getElementById('hideImageBtn');
-        if (!btn) return;
-        btn.addEventListener('click', () => {
-            const isHidden = document.body.classList.toggle('hide-images');
-            btn.innerHTML = isHidden ? '<i class="fas fa-eye"></i> 显示图片' : '<i class="fas fa-image"></i> 隐藏图片';
-            manualHide = isHidden;
-            if (isHidden) {
-                if (autoHideTimer) { clearTimeout(autoHideTimer); autoHideTimer = null; }
-            } else {
-                resetAutoHideTimer();
-            }
-        });
-    }
-
-    // ------------------------------ 自动隐藏（已修复） ------------------------------
-    function loadAutoHideSettings() {
-        try {
-            const saved = localStorage.getItem('autoHideSettings');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (typeof parsed.enabled === 'boolean') autoHideSettings.enabled = parsed.enabled;
-                if (typeof parsed.timeout === 'number' && parsed.timeout > 0) autoHideSettings.timeout = parsed.timeout;
-            }
-        } catch(e) {}
-        const chk = document.getElementById('autoHideEnabledCheckbox');
-        const inp = document.getElementById('autoHideTimeoutInput');
-        if (chk) chk.checked = autoHideSettings.enabled;
-        if (inp) inp.value = autoHideSettings.timeout;
-    }
-    function saveAutoHideSettings() {
-        try { localStorage.setItem('autoHideSettings', JSON.stringify(autoHideSettings)); } catch(e) {}
-    }
-    function resetAutoHideTimer() {
-        if (autoHideTimer) { clearTimeout(autoHideTimer); autoHideTimer = null; }
-        if (autoHideSettings.enabled && !manualHide && !document.body.classList.contains('hide-images')) {
-            autoHideTimer = setTimeout(() => {
-                document.body.classList.add('hide-images');
-                const btn = document.getElementById('hideImageBtn');
-                if (btn) btn.innerHTML = '<i class="fas fa-eye"></i> 显示图片';
-                autoHideTimer = null;
-            }, autoHideSettings.timeout * 1000);
-        }
-    }
-    function onUserActivity() {
-        if (autoHideSettings.enabled) {
-            if (document.body.classList.contains('hide-images') && !manualHide) {
-                document.body.classList.remove('hide-images');
-                const btn = document.getElementById('hideImageBtn');
-                if (btn) btn.innerHTML = '<i class="fas fa-image"></i> 隐藏图片';
-            }
-            resetAutoHideTimer();
-        }
-    }
-    function initAutoHide() {
-        loadAutoHideSettings();
-        const events = ['mousemove', 'click', 'keydown', 'scroll', 'touchstart'];
-        events.forEach(evt => document.addEventListener(evt, onUserActivity, { passive: true }));
-        resetAutoHideTimer();
-
-        // 绑定菜单点击（确保生效）
-        const menuItem = document.getElementById('menuAutoHideSettings');
-        if (menuItem) {
-            menuItem.addEventListener('click', function(e) {
-                e.stopPropagation();
-                loadAutoHideSettings();
-                document.getElementById('autoHideModal').style.display = 'flex';
-            });
-        }
-
-        // 模态框按钮
-        document.getElementById('closeAutoHideModalBtn').onclick = () => document.getElementById('autoHideModal').style.display = 'none';
-        document.getElementById('closeAutoHideModalBtn2').onclick = () => document.getElementById('autoHideModal').style.display = 'none';
-        document.getElementById('saveAutoHideBtn').onclick = () => {
-            const chk = document.getElementById('autoHideEnabledCheckbox');
-            const inp = document.getElementById('autoHideTimeoutInput');
-            autoHideSettings.enabled = chk.checked;
-            autoHideSettings.timeout = parseInt(inp.value) || 30;
-            saveAutoHideSettings();
-            if (autoHideSettings.enabled && manualHide) {
-                manualHide = false;
-                if (document.body.classList.contains('hide-images')) {
-                    document.body.classList.remove('hide-images');
-                    const btn = document.getElementById('hideImageBtn');
-                    if (btn) btn.innerHTML = '<i class="fas fa-image"></i> 隐藏图片';
-                }
-            }
-            resetAutoHideTimer();
-            showToast('✅ 自动隐藏设置已保存');
-            document.getElementById('autoHideModal').style.display = 'none';
-        };
-        document.getElementById('autoHideModal').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) document.getElementById('autoHideModal').style.display = 'none';
-        });
-    }
-
-    // ------------------------------ 评分筛选 ------------------------------
+    // ===== 评分筛选 =====
     function updateRatingFilterUI(){ const stars=document.querySelectorAll('#ratingFilter i'); stars.forEach(star=>{ const r=parseInt(star.dataset.rating); if(currentRatingFilter>0&&r<=currentRatingFilter) star.className='fas fa-star active'; else star.className='far fa-star'; }); }
     function setupRatingFilter(){ const stars=document.querySelectorAll('#ratingFilter i'); stars.forEach(star=>{ star.addEventListener('click',()=>{ const r=parseInt(star.dataset.rating); currentRatingFilter=(currentRatingFilter===r)?0:r; updateRatingFilterUI(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); }); document.getElementById('clearRatingFilter').addEventListener('click',()=>{ currentRatingFilter=0; updateRatingFilterUI(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); }
 
-    // ------------------------------ 核心渲染 ------------------------------
+    // ========================== 核心渲染（含预览按钮） ==========================
     function updateFilteredList(){ const search=document.getElementById('searchInput').value.toLowerCase(); let filtered=magnets.filter(m=>{ if(search){ const titleMatch=m.title.toLowerCase().includes(search); const tagMatch=m.tagIds.some(tid=>tags.find(t=>t.id===tid)?.name.toLowerCase().includes(search)); if(!titleMatch&&!tagMatch) return false; } if(currentRatingFilter>0&&m.rating!==currentRatingFilter) return false; return true; }); filtered.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); allFilteredMagnets=filtered; }
     async function renderLoadedCards(){ const container=document.getElementById('magnetGridContainer'); const loaded=allFilteredMagnets.slice(0,currentLoadedCount); if(loaded.length===0&&allFilteredMagnets.length>0){ currentLoadedCount=Math.min(pageSize,allFilteredMagnets.length); return renderLoadedCards(); } if(loaded.length===0){ container.innerHTML='<div style="text-align:center;padding:2rem">暂无磁力</div>'; document.getElementById('loadMoreTrigger').style.display='none'; return; } container.innerHTML=loaded.map(m=>{ let tagSpans=m.tagIds.map(tid=>tags.find(t=>t.id===tid)).filter(t=>t).map(t=>`<span class="tag">${escapeHtml(t.name)}</span>`).join(''); let stars=''; for(let i=1;i<=5;i++) stars+=`<i class="${i<=m.rating?'fas fa-star active':'far fa-star'}" data-rating="${i}"></i>`; const checked=selectedCardIds.has(m.id)?'checked':''; const shortLink=m.magnetLink.length>45?m.magnetLink.substring(0,45)+'...':m.magnetLink; const isLocal=m.imageUrl&&m.imageUrl.startsWith('img_'); const badge=isLocal?'<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>':(m.imageUrl?'<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>':''); return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\" viewBox=\"0 0 400 200\"%3E%3Crect width=\"400\" height=\"200\" fill=\"%23e2e8f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" font-family=\"Arial\" font-size=\"16\" fill=\"%23475569\" text-anchor=\"middle\" dy=\".3em\"%3ELoading...%3C/text%3E%3C/svg%3E')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn preview-card-btn" data-magnet="${escapeHtml(m.magnetLink)}" data-title="${escapeHtml(m.title)}" title="预览磁力"><i class="fas fa-eye"></i> 预览</button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`; }).join(''); if(selectionMode){ document.querySelectorAll('.card-checkbox').forEach(cb=>{ cb.addEventListener('change',(e)=>{ e.stopPropagation(); const id=parseInt(cb.dataset.id); if(cb.checked) selectedCardIds.add(id); else selectedCardIds.delete(id); updateSelectedCount(); }); }); } document.querySelectorAll('.star-rating').forEach(div=>{ const mid=parseInt(div.dataset.id); const m=magnets.find(m=>m.id===mid); if(!m) return; const stars=div.querySelectorAll('i'); stars.forEach((star,idx)=>{ star.addEventListener('click',(e)=>{ e.stopPropagation(); let newRating=idx+1; if(m.rating===newRating) newRating=0; if(m.rating!==newRating){ m.rating=newRating; saveToDB().then(()=>{ updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); } }); }); }); document.querySelectorAll('.copy-magnet').forEach(btn=>btn.addEventListener('click',(e)=>{ e.stopPropagation(); copyMagnetLink(btn.getAttribute('data-magnet')); })); document.querySelectorAll('.preview-img').forEach(div=>{ div.addEventListener('click',(e)=>{ e.stopPropagation(); const url=div.getAttribute('data-img-url'); if(url) showImagePreview(url); }); }); document.querySelectorAll('.save-image-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const id= parseInt(btn.getAttribute('data-id')); await saveImageToLocal(id,false); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }); }); document.querySelectorAll('.send-pikpak-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const magnet = btn.getAttribute('data-magnet'); try { await sendToPikPakViaBridge(magnet); showToast('✅ 已发送到 PikPak，任务创建成功！'); } catch (err) { showToast('❌ ' + err.message, true); } }); }); document.querySelectorAll('.preview-card-btn').forEach(btn=>{ btn.addEventListener('click',(e)=>{ e.stopPropagation(); const magnet = btn.getAttribute('data-magnet'); const title = btn.getAttribute('data-title') || '未知资源'; showCardPreview(magnet, title); }); }); bindMagnetLinkEvents(); for(const card of container.querySelectorAll('.magnet-card')){ const mid=parseInt(card.getAttribute('data-id')); const m=magnets.find(m=>m.id===mid); if(m){ const url=await getImageUrlForCard(m); const preview=card.querySelector('.preview-img'); if(preview){ preview.style.backgroundImage=`url(${url})`; preview.setAttribute('data-img-url',url); } } } const trigger=document.getElementById('loadMoreTrigger'); if(currentLoadedCount<allFilteredMagnets.length){ trigger.style.display='flex'; trigger.innerText='向下滚动加载更多...'; }else{ trigger.style.display='none'; } }
 
-    // ------------------------------ 卡片预览弹窗（保存/更新逻辑） ------------------------------
+    // ===== 卡片预览弹窗 =====
     function showCardPreview(magnetLink, title) {
         const handler = (event) => {
             if (event.data && event.data.type === 'MAGNET_PREVIEW_RESULT') {
@@ -990,6 +856,7 @@
         setTimeout(() => { window.removeEventListener('message', handler); }, 30000);
     }
 
+    // ===== 预览弹窗（核心：保存/更新逻辑） =====
     function showPreviewPopup(magnetLink, title, data) {
         const name = data.name || title || '未知资源';
         const count = data.count || 0;
@@ -1060,6 +927,7 @@
         closeBtn.addEventListener('click', close);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
+        // ===== 核心修改：保存/更新逻辑 =====
         const buttons = overlay.querySelectorAll('[data-action]');
         buttons.forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -1069,16 +937,21 @@
                 btn.textContent = '处理中...';
 
                 try {
+                    // 查找是否已存在该磁力
                     const existing = magnets.find(m => m.magnetLink.toLowerCase() === magnetLink.toLowerCase());
 
+                    // 离线操作（无论是否更新，都执行离线）
                     if (action === 'offline' || action === 'both') {
                         await sendToPikPakViaBridge(magnetLink);
                     }
 
+                    // 保存/更新操作
                     if (action === 'save' || action === 'both') {
                         if (existing) {
+                            // 更新现有卡片
                             existing.title = name;
                             existing.size = size || '';
+                            // 处理图片：如果已有本地图片则保留，否则尝试下载
                             if (selectedImageUrl && !existing.imageUrl?.startsWith('img_')) {
                                 try {
                                     let blob = null;
@@ -1095,9 +968,11 @@
                                     }
                                 } catch(e) { /* 保留原始URL */ }
                             }
+                            // 如果已有本地图片且未选择新图片，保留原样
                             await saveToDB();
                             showToast('✅ 已更新卡片信息');
                         } else {
+                            // 创建新卡片
                             let finalImageUrl = selectedImageUrl || '';
                             if (finalImageUrl && !finalImageUrl.startsWith('img_')) {
                                 try {
@@ -1130,6 +1005,7 @@
                             await saveToDB();
                             showToast('✅ 已保存到管理器');
                         }
+                        // 刷新视图
                         updateFilteredList();
                         currentLoadedCount = 0;
                         renderLoadedCards();
@@ -1148,7 +1024,7 @@
         });
     }
 
-    // ------------------------------ 截图提取 ------------------------------
+    // ===== 截图提取 =====
     function toWhatslinkImageUrl(value) {
         let url = String(value || '').trim();
         if (!url) return '';
@@ -1231,7 +1107,7 @@
         return (size < 10 ? size.toFixed(2) : size.toFixed(1)) + ' ' + units[i];
     }
 
-    // ------------------------------ 多选 & 界面控制 ------------------------------
+    // ===== 多选 & 界面控制 =====
     function toggleSelectionMode(){ selectionMode=!selectionMode; const container=document.getElementById('magnetGridContainer'); const bar=document.getElementById('floatingBatchBar'); if(selectionMode){ container.classList.add('selection-mode'); if(selectedCardIds.size>0) bar.style.display='flex'; else bar.style.display='none'; lastSelectedCardId=null; }else{ container.classList.remove('selection-mode'); bar.style.display='none'; selectedCardIds.clear(); } renderLoadedCards(); }
     function updateSelectedCount(){ const span=document.getElementById('selectedCount'); if(span) span.innerText=`已选择 ${selectedCardIds.size} 个卡片`; const btns=document.querySelectorAll('#batchAddTagsBtn, #batchCopyLinksBtn, #batchDeleteBtn, #batchSaveImagesBtn'); btns.forEach(btn=>btn.disabled=(selectedCardIds.size===0)); const bar=document.getElementById('floatingBatchBar'); if(selectionMode){ if(selectedCardIds.size>0) bar.style.display='flex'; else bar.style.display='none'; } }
     function selectAllCurrent(){ const ids=allFilteredMagnets.slice(0,currentLoadedCount).map(m=>m.id); ids.forEach(id=>selectedCardIds.add(id)); renderLoadedCards(); updateSelectedCount(); showToast(`已选择当前视图中的 ${ids.length} 张卡片`); }
@@ -1246,7 +1122,7 @@
     function attachCardClickHandler(){ const container=document.getElementById('magnetGridContainer'); if(!container) return; container.addEventListener('click',(e)=>{ const card=e.target.closest('.magnet-card'); if(!card) return; const isInteractive=e.target.closest('.card-actions, .magnet-link, .star-rating i, .preview-img, .card-checkbox'); if(isInteractive) return; if(!selectionMode) toggleSelectionMode(); const cb=card.querySelector('.card-checkbox'); if(cb){ const id=parseInt(card.getAttribute('data-id')); if(cb.checked) selectedCardIds.delete(id); else selectedCardIds.add(id); cb.checked=!cb.checked; lastSelectedCardId=id; updateSelectedCount(); renderLoadedCards(); } }); }
     function setupShiftSelection(){ const container=document.getElementById('magnetGridContainer'); if(!container) return; container.addEventListener('click',(e)=>{ if(!selectionMode) return; const cb=e.target.closest('.card-checkbox'); if(cb){ const card=cb.closest('.magnet-card'); if(card){ const id=parseInt(card.getAttribute('data-id')); if(e.shiftKey&&lastSelectedCardId!==null&&lastSelectedCardId!==id){ const allCards=Array.from(document.querySelectorAll('.magnet-card')); const idsOrder=allCards.map(c=>parseInt(c.getAttribute('data-id'))).filter(i=>!isNaN(i)); const idxA=idsOrder.indexOf(lastSelectedCardId); const idxB=idsOrder.indexOf(id); if(idxA!==-1&&idxB!==-1){ const start=Math.min(idxA,idxB); const end=Math.max(idxA,idxB); const toSelect=idsOrder.slice(start,end+1); if(!e.ctrlKey) selectedCardIds.clear(); toSelect.forEach(i=>selectedCardIds.add(i)); renderLoadedCards(); updateSelectedCount(); showToast(`已选择 ${selectedCardIds.size} 张卡片`); } } lastSelectedCardId=id; } } }); document.addEventListener('click',(e)=>{ if(!selectionMode) return; if(!e.target.closest('.magnet-card')) lastSelectedCardId=null; }); }
 
-    // ------------------------------ 导入导出 ------------------------------
+    // ===== 导入导出 =====
     async function importFromClipboard() { try { const text = await navigator.clipboard.readText(); let parsed; try { parsed = JSON.parse(text); } catch(e) { const fixed = autoFixJsonArray(text); parsed = JSON.parse(fixed); } let items = Array.isArray(parsed) ? parsed : [parsed]; if (items.length === 0) { alert('剪贴板中没有有效数据'); return; } const validItems = items.filter(item => (item.title || item.name) && (item.magnetLink || item.magnet)); if (validItems.length === 0) { alert('未找到有效的磁力链接数据（需要 title 和 magnetLink 字段）'); return; } const newMagnets = []; for (const src of validItems) { const title = src.title || src.name || ''; const magnetLink = src.magnetLink || src.magnet || ''; let imageUrl = src.imageUrl || src.image || ''; const size = src.size || ''; if (magnets.some(m => m.magnetLink.toLowerCase() === magnetLink.toLowerCase())) continue; let finalImageUrl = imageUrl; if (imageUrl && !imageUrl.startsWith('img_') && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) { try { let blob = null; if (window.__MAGNET_HELPER_EXTENSION__) { try { blob = await fetchImageViaExtension(imageUrl); } catch(e) { console.warn('扩展代理失败，回退到标准fetch:', e.message); } } if (!blob) { const response = await fetch(imageUrl); if (!response.ok) throw new Error(`HTTP ${response.status}`); blob = await response.blob(); } const newId = await storeImageBlob(imageUrl, blob); if (newId) finalImageUrl = newId; } catch(err) { console.warn('导入时图片处理失败:', err.message); } } const cleanedTitle = cleanTitle(title); const newMagnet = { id: nextMagnetId++, magnetLink: magnetLink, title: cleanedTitle, imageUrl: finalImageUrl, size: size, tagIds: [], rating: 0, createdAt: Date.now() }; newMagnets.push(newMagnet); } if (newMagnets.length === 0) { alert('没有新的磁力链接（可能均已存在）'); return; } await resolveImportDuplicates(newMagnets); } catch(e) { alert('❌ 解析剪贴板失败，请确保复制的 JSON 格式正确。\n错误信息：' + e.message); } }
     async function resolveImportDuplicates(newItems) { for (const item of newItems) { applyAutoTagsToMagnet(item); magnets.push(item); } await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); return { resolved: true, addedCount: newItems.length }; }
     function autoFixJsonArray(text) { let cleaned = text.trim(); if (!cleaned.startsWith('[')) cleaned = '[' + cleaned; if (!cleaned.endsWith(']')) cleaned = cleaned + ']'; cleaned = cleaned.replace(/\}\s*\{/g, '},{'); if (cleaned.includes(']{')) { let parts = cleaned.split(/\]/); let firstPart = parts[0] + ']'; let rest = parts.slice(1).join(''); rest = rest.replace(/^\s*\{/, '{'); cleaned = firstPart + ',' + rest; cleaned = cleaned.replace(/\}\s*\{/g, '},{'); } if (cleaned.startsWith('[[') && cleaned.endsWith(']]')) cleaned = cleaned.slice(1, -1); return cleaned; }
@@ -1262,7 +1138,7 @@
     function exportSingleFile() { const exportObj = { version: "3.0", tags: tags, magnets: magnets, autoTagRules: autoTagRules, tagOrder: tagOrder, filterWords: filterWords }; const dataStr = JSON.stringify(exportObj, null, 2); const blob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `magnet_full_backup_${new Date().toISOString().slice(0,19)}.json`; a.click(); URL.revokeObjectURL(url); showToast('已导出完整备份（不含图片二进制）'); }
     async function importSingleFile() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = async (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (ev) => { try { const data = JSON.parse(ev.target.result); if (data.tags && data.magnets) { tags = data.tags; magnets = data.magnets; if (data.autoTagRules) autoTagRules = data.autoTagRules; else showToast('导入的备份不包含自动标签规则，已保留当前规则'); if (data.filterWords && Array.isArray(data.filterWords)) filterWords = data.filterWords; else showToast('导入的备份不包含过滤词，已保留当前词条'); if (data.tagOrder && Array.isArray(data.tagOrder)) { tagOrder = data.tagOrder; } else { tagOrder = tags.map(t => t.id); } sortTagsByOrder(); nextTagId = Math.max(...tags.map(t=>t.id), 0) + 1; nextMagnetId = Math.max(...magnets.map(m=>m.id), 0) + 1; await saveToDB(); await saveFilterWordsToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); renderDraggable(); renderTagManagementList(); renderRulesList(); refreshRuleTagSelect(); renderFilterWordsList(); showToast(`导入成功！共 ${magnets.length} 张卡片`); } else { alert('文件格式不正确，缺少 tags 或 magnets 字段'); } } catch (err) { alert('解析失败：' + err.message); } }; reader.readAsText(file); }; input.click(); }
     async function resetAllData() { if (confirm('⚠️ 重置将删除所有数据，不可恢复！')) { tags = [{ id: 1, name: "4K" }, { id: 2, name: "HDR" }, { id: 3, name: "蓝光原盘" }]; tagOrder = [1, 2, 3]; saveTagOrder(); magnets = [ { id: Date.now() - 100000, magnetLink: "magnet:?xt=urn:btih:aaa", title: "奥本海默 2023", imageUrl: "https://picsum.photos/id/111/400/200", size: "1.2 GB", tagIds: [1,2], rating: 5, createdAt: Date.now() - 100000 }, { id: Date.now() - 50000, magnetLink: "magnet:?xt=urn:btih:bbb", title: "最后生还者 第一季", imageUrl: "https://picsum.photos/id/119/400/200", size: "3.5 GB", tagIds: [2,3], rating: 4, createdAt: Date.now() - 50000 } ]; autoTagRules = []; filterWords = []; failList = []; nextTagId = 4; nextMagnetId = 3; currentRatingFilter = 0; selectionMode = false; selectedCardIds.clear(); await saveToDB(); await saveFilterWordsToDB(); await saveFailListToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); renderTagManagementList(); updateRatingFilterUI(); renderFilterWordsList(); alert('数据已重置'); } }
-    // 注意：saveToFolder 和 loadFromFolder 已移除
+    // saveToFolder 和 loadFromFolder 已移除
 
     async function fullBackupWithImages() { if (typeof JSZip === 'undefined') { alert('JSZip库未加载，请刷新页面重试'); return; } const zip = new JSZip(); const dataJson = { tags, magnets, autoTagRules, filterWords, tagOrder, version: "3.2" }; zip.file("data.json", JSON.stringify(dataJson, null, 2)); const images = await new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readonly'); const store = tx.objectStore(STORES.images); const req = store.getAll(); req.onsuccess = () => resolve(req.result); req.onerror = (e) => reject(e.target.error); }); const imgFolder = zip.folder("images"); for (const img of images) { const blob = img.blob; const ext = blob.type.split('/')[1] || 'bin'; const filename = img.id + '.' + (ext === 'jpeg' ? 'jpg' : ext); imgFolder.file(filename, blob); } const content = await zip.generateAsync({ type: "blob" }); const url = URL.createObjectURL(content); const a = document.createElement('a'); a.href = url; a.download = `magnet_fullbackup_${new Date().toISOString().slice(0,19)}.zip`; a.click(); URL.revokeObjectURL(url); showToast(`已导出完整备份，包含 ${images.length} 张图片`); }
     async function restoreImagesFromFolder() { const input = document.createElement('input'); input.type = 'file'; input.webkitdirectory = true; input.directory = true; input.multiple = true; input.onchange = async (e) => { const files = Array.from(e.target.files); const imageFiles = files.filter(file => { const ext = file.name.split('.').pop().toLowerCase(); return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(ext); }); if (imageFiles.length === 0) { showToast('未找到图片文件', true); return; } const clearTx = db.transaction([STORES.images], 'readwrite'); const clearStore = clearTx.objectStore(STORES.images); await new Promise((resolve, reject) => { const clearReq = clearStore.clear(); clearReq.onsuccess = resolve; clearReq.onerror = (err) => reject(err); }); imageBlobCache.clear(); let successCount = 0; let failCount = 0; showProgressModal(); updateProgress(0, imageFiles.length, 0, 0); for (let i = 0; i < imageFiles.length; i++) { const file = imageFiles[i]; try { let id = file.name; const lastDot = id.lastIndexOf('.'); if (lastDot !== -1) id = id.substring(0, lastDot); const blob = await file.arrayBuffer().then(buf => new Blob([buf], {type: file.type})); await new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readwrite'); const store = tx.objectStore(STORES.images); const req = store.put({ id: id, blob: blob, url: '', timestamp: Date.now() }); req.onsuccess = resolve; req.onerror = (err) => reject(err); tx.oncomplete = resolve; }); successCount++; } catch (err) { console.error(`导入图片 ${file.name} 失败:`, err); failCount++; } updateProgress(i + 1, imageFiles.length, successCount, failCount); await new Promise(r => setTimeout(r, 10)); } hideProgressModal(); showToast(`已导入 ${successCount} 张图片，失败 ${failCount} 张`, failCount > 0); let fixedCount = 0; for (const magnet of magnets) { if (magnet.imageUrl && magnet.imageUrl.startsWith('img_')) { let pureId = magnet.imageUrl; if (pureId.includes('.')) { pureId = pureId.split('.')[0]; magnet.imageUrl = pureId; fixedCount++; } } } if (fixedCount > 0) { await saveToDB(); showToast(`自动修复了 ${fixedCount} 个卡片的图片引用`, false); } updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }; input.click(); }
@@ -1271,7 +1147,7 @@
     function initTheme() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark') { document.body.classList.add('dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } else { document.body.classList.remove('dark'); document.getElementById('themeToggleBtn').textContent = '🌙'; } }
     function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
 
-    // ------------------------------ 扩展队列导入 ------------------------------
+    // ===== 扩展队列导入 =====
     let autoImportTimer = null;
     function fetchPendingFromExtension() { return new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'PENDING_MAGNETS_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve({ data: event.data.data, total: event.data.total }); } else { reject(new Error(event.data.error || '获取失败')); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_PENDING_MAGNETS' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('扩展未响应')); }, 10000); }); }
     async function importFromExtension() { try { const result = await fetchPendingFromExtension(); if (!result.data || result.data.length === 0) { showToast('扩展队列为空', false); return; } const items = result.data.map(item => ({ title: item.title || '未知', magnetLink: item.magnet, size: item.size || '', imageUrl: item.imageUrl || '' })); const newMagnets = []; for (const src of items) { const title = src.title || ''; const magnetLink = src.magnetLink || ''; const size = src.size || ''; if (magnets.some(m => m.magnetLink.toLowerCase() === magnetLink.toLowerCase())) continue; let finalImageUrl = src.imageUrl || ''; if (finalImageUrl && !finalImageUrl.startsWith('img_') && (finalImageUrl.startsWith('http://') || finalImageUrl.startsWith('https://'))) { try { let blob = null; if (window.__MAGNET_HELPER_EXTENSION__) { try { blob = await fetchImageViaExtension(finalImageUrl); } catch(e) {} } if (!blob) { const response = await fetch(finalImageUrl); if (response.ok) blob = await response.blob(); } if (blob) { const newId = await storeImageBlob(finalImageUrl, blob); if (newId) finalImageUrl = newId; } } catch(err) { console.warn('导入时图片处理失败:', err.message); } } const cleanedTitle = cleanTitle(title); const newMagnet = { id: nextMagnetId++, magnetLink: magnetLink, title: cleanedTitle, imageUrl: finalImageUrl, size: size, tagIds: [], rating: 0, createdAt: Date.now() }; applyAutoTagsToMagnet(newMagnet); newMagnets.push(newMagnet); } if (newMagnets.length === 0) { showToast('没有新的磁力链接（可能均已存在）', true); return; } magnets.push(...newMagnets); await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); const clearAfter = document.getElementById('clearAfterImport')?.checked ?? false; if (clearAfter) { try { await new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'CLEAR_PENDING_MAGNETS_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve(true); } else { reject(new Error(event.data.error || '清空失败')); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_CLEAR_PENDING_MAGNETS' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('清空请求超时')); }, 5000); }); showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，已清空队列`); } catch (err) { showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力，但清空队列失败`, true); } } else { showToast(`✅ 从扩展成功导入 ${newMagnets.length} 条磁力（保留队列）`); } } catch (err) { showToast('❌ 从扩展导入失败：' + err.message, true); } }
@@ -1279,7 +1155,7 @@
     function stopAutoImport() { if (autoImportTimer) { clearInterval(autoImportTimer); autoImportTimer = null; } const toggleBtn = document.getElementById('autoImportToggleBtn'); if (toggleBtn) { toggleBtn.innerHTML = '<i class="fas fa-play"></i> 启动'; toggleBtn.style.background = '#10b981'; } document.getElementById('autoImportStatus').textContent = '已停止'; localStorage.setItem('autoImportRunning', 'false'); showToast('自动导入已停止'); }
     function toggleAutoImport() { if (autoImportTimer) { stopAutoImport(); } else { startAutoImport(); } }
 
-    // ------------------------------ 失败预览（429） ------------------------------
+    // ===== 失败预览（429） =====
     function fetchFailedPreviewsFromExtension() { return new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'FAILED_PREVIEWS_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve({ data: event.data.data, total: event.data.total }); } else { reject(new Error(event.data.error || '获取失败')); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_FAILED_PREVIEWS' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('扩展未响应')); }, 10000); }); }
     function removeFailedPreviewFromExtension(magnet) { return new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'REMOVE_FAILED_PREVIEW_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve(true); } else { reject(new Error(event.data.error || '删除失败')); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_REMOVE_FAILED_PREVIEW', magnet: magnet }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('删除请求超时')); }, 5000); }); }
     function clearAllFailedPreviews() { return new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'CLEAR_FAILED_PREVIEWS_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve(true); } else { reject(new Error(event.data.error || '清空失败')); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_CLEAR_FAILED_PREVIEWS' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('清空请求超时')); }, 5000); }); }
@@ -1311,6 +1187,7 @@
                 </div>`;
             }).join('');
 
+            // ---- 删除按钮 ----
             container.querySelectorAll('.delete-fail-btn').forEach(btn => {
                 btn.onclick = async (e) => {
                     e.stopPropagation();
@@ -1326,6 +1203,7 @@
                 };
             });
 
+            // ---- 预览按钮：调用 showCardPreview 弹出预览窗，不自动删除 ----
             container.querySelectorAll('.preview-fail-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -1335,6 +1213,7 @@
                 };
             });
 
+            // ---- 导入按钮 ----
             container.querySelectorAll('.import-fail-btn').forEach(btn => {
                 btn.onclick = async (e) => {
                     e.stopPropagation();
@@ -1377,7 +1256,25 @@
     }
     async function showFailedPreviewModal() { const container = document.getElementById('failedPreviewList'); if (container) container.innerHTML = '<div style="text-align:center;color:#64748b;padding:1rem;">⏳ 加载中...</div>'; document.getElementById('failedPreviewModal').style.display = 'flex'; await loadFailedPreviewList(); }
 
-    // ------------------------------ 批量添加 ------------------------------
+    // ===== 批量添加（持久化存储） =====
+    function saveBatchItemsToStorage() {
+        localStorage.setItem('batchItems', JSON.stringify(batchItems));
+    }
+    function loadBatchItemsFromStorage() {
+        const stored = localStorage.getItem('batchItems');
+        if (stored) {
+            try {
+                batchItems = JSON.parse(stored);
+                // 如果解析后不是数组，重置
+                if (!Array.isArray(batchItems)) batchItems = [];
+            } catch(e) {
+                batchItems = [];
+            }
+        } else {
+            batchItems = [];
+        }
+    }
+
     function renderBatchList() {
         const container = document.getElementById('batchItemList');
         if (!container) return;
@@ -1390,11 +1287,12 @@
             const statusText = item.status === 'success' ? '✅ 完成' : (item.status === 'error' ? '❌ 失败' : '');
             return `<div class="batch-item" data-index="${idx}"><span style="font-weight:bold;font-size:0.8rem;">#${idx+1}</span><span class="batch-magnet" title="${escapeHtml(item.magnet)}">${escapeHtml(item.magnet.substring(0, 80))}${item.magnet.length > 80 ? '...' : ''}</span><span class="status-badge ${statusClass}">${statusText || '待操作'}</span><div class="batch-actions"><button class="preview-btn" data-index="${idx}">🔍 预览</button><button class="offline-btn" data-index="${idx}">📥 离线</button><button class="save-btn" data-index="${idx}">💾 保存</button><button class="both-btn" data-index="${idx}">⚡ 离线并保存</button><button class="delete-btn" data-index="${idx}">🗑️</button></div></div>`;
         }).join('');
+        // 绑定事件
         container.querySelectorAll('.preview-btn').forEach(btn => { btn.onclick = () => { const idx = parseInt(btn.dataset.index); const magnet = batchItems[idx].magnet; showCardPreview(magnet, ''); }; });
-        container.querySelectorAll('.offline-btn').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.dataset.index); const magnet = batchItems[idx].magnet; try { await sendToPikPakViaBridge(magnet); batchItems[idx].status = 'success'; showToast('✅ 离线成功'); } catch (err) { batchItems[idx].status = 'error'; showToast('❌ 离线失败: ' + err.message, true); } renderBatchList(); }; });
-        container.querySelectorAll('.save-btn').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.dataset.index); const magnet = batchItems[idx].magnet; try { await new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'SAVE_MAGNET_RESULT') { window.removeEventListener('message', handler); if (event.data.success) resolve(true); else reject(new Error(event.data.error || '保存失败')); } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_SAVE_MAGNET', magnet: magnet, title: '', size: '', imageUrl: '' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('超时')); }, 10000); }); batchItems[idx].status = 'success'; showToast('✅ 已保存'); } catch (err) { batchItems[idx].status = 'error'; showToast('❌ 保存失败: ' + err.message, true); } renderBatchList(); }; });
-        container.querySelectorAll('.both-btn').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.dataset.index); const magnet = batchItems[idx].magnet; try { await Promise.all([ sendToPikPakViaBridge(magnet), new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'SAVE_MAGNET_RESULT') { window.removeEventListener('message', handler); if (event.data.success) resolve(true); else reject(new Error(event.data.error || '保存失败')); } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_SAVE_MAGNET', magnet: magnet, title: '', size: '', imageUrl: '' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('超时')); }, 10000); }) ]); batchItems[idx].status = 'success'; showToast('✅ 离线并保存成功'); } catch (err) { batchItems[idx].status = 'error'; showToast('❌ 操作失败: ' + err.message, true); } renderBatchList(); }; });
-        container.querySelectorAll('.delete-btn').forEach(btn => { btn.onclick = () => { const idx = parseInt(btn.dataset.index); batchItems.splice(idx, 1); renderBatchList(); if (batchItems.length === 0) document.getElementById('batchParseResult').style.display = 'none'; }; });
+        container.querySelectorAll('.offline-btn').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.dataset.index); const magnet = batchItems[idx].magnet; try { await sendToPikPakViaBridge(magnet); batchItems[idx].status = 'success'; } catch (err) { batchItems[idx].status = 'error'; } renderBatchList(); saveBatchItemsToStorage(); }; });
+        container.querySelectorAll('.save-btn').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.dataset.index); const magnet = batchItems[idx].magnet; try { await new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'SAVE_MAGNET_RESULT') { window.removeEventListener('message', handler); if (event.data.success) resolve(true); else reject(new Error(event.data.error || '保存失败')); } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_SAVE_MAGNET', magnet: magnet, title: '', size: '', imageUrl: '' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('超时')); }, 10000); }); batchItems[idx].status = 'success'; } catch (err) { batchItems[idx].status = 'error'; } renderBatchList(); saveBatchItemsToStorage(); }; });
+        container.querySelectorAll('.both-btn').forEach(btn => { btn.onclick = async () => { const idx = parseInt(btn.dataset.index); const magnet = batchItems[idx].magnet; try { await Promise.all([ sendToPikPakViaBridge(magnet), new Promise((resolve, reject) => { const handler = (event) => { if (event.data && event.data.type === 'SAVE_MAGNET_RESULT') { window.removeEventListener('message', handler); if (event.data.success) resolve(true); else reject(new Error(event.data.error || '保存失败')); } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_SAVE_MAGNET', magnet: magnet, title: '', size: '', imageUrl: '' }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('超时')); }, 10000); }) ]); batchItems[idx].status = 'success'; } catch (err) { batchItems[idx].status = 'error'; } renderBatchList(); saveBatchItemsToStorage(); }; });
+        container.querySelectorAll('.delete-btn').forEach(btn => { btn.onclick = () => { const idx = parseInt(btn.dataset.index); batchItems.splice(idx, 1); renderBatchList(); saveBatchItemsToStorage(); if (batchItems.length === 0) document.getElementById('batchParseResult').style.display = 'none'; }; });
     }
 
     function parseBatchMagnets() {
@@ -1408,20 +1306,34 @@
         if (newItems.length === 0) { showToast('所有磁力链接已存在', false); return; }
         batchItems = batchItems.concat(newItems);
         renderBatchList();
+        saveBatchItemsToStorage();
         document.getElementById('batchParseResult').style.display = 'block';
         input.value = '';
         showToast(`已解析 ${newItems.length} 个新磁力`);
     }
 
     function openBatchAddModal() {
-        batchItems = [];
+        loadBatchItemsFromStorage();
         document.getElementById('batchMagnetInput').value = '';
-        document.getElementById('batchParseResult').style.display = 'none';
-        document.getElementById('batchItemList').innerHTML = '';
+        if (batchItems.length > 0) {
+            document.getElementById('batchParseResult').style.display = 'block';
+        } else {
+            document.getElementById('batchParseResult').style.display = 'none';
+        }
+        renderBatchList();
         document.getElementById('batchAddModal').style.display = 'flex';
     }
 
-    // ------------------------------ 其他辅助函数 ------------------------------
+    // 修改关闭模态框时不清除列表（持久化）
+    document.getElementById('closeBatchAddModalBtn').addEventListener('click', () => {
+        document.getElementById('batchAddModal').style.display = 'none';
+        // 不删除 batchItems，保留
+    });
+    document.getElementById('batchAddModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) document.getElementById('batchAddModal').style.display = 'none';
+    });
+
+    // ===== 其他辅助函数 =====
     function showProgressModal() { document.getElementById('progressModal').style.display = 'flex'; }
     function hideProgressModal() { document.getElementById('progressModal').style.display = 'none'; }
     function updateProgress(current, total, success, failed) { const percent = total > 0 ? (current / total) * 100 : 0; document.getElementById('progressFill').style.width = percent + '%'; document.getElementById('progressDetail').innerText = `${current} / ${total}`; document.getElementById('progressInfo').innerHTML = `已处理: ${current}<br>成功: ${success} | 失败: ${failed}`; }
@@ -1552,7 +1464,7 @@
         updateStats(allFilteredMagnets.length, magnets.length);
     }
 
-    // ------------------------------ 主事件绑定 ------------------------------
+    // ===== 主事件绑定（所有按钮） =====
     function bindButtons() {
         document.getElementById('menuAddMagnet').onclick = openBatchAddModal;
         document.getElementById('menuImportClipboard').onclick = importFromClipboard;
@@ -1565,12 +1477,6 @@
         document.getElementById('menuConvertAllImagesToLocal').onclick = convertAllImagesToLocal;
         document.getElementById('menuViewFailList').onclick = () => showFailListModal();
         document.getElementById('menuViewFailedPreviews').onclick = showFailedPreviewModal;
-        // 自动隐藏已在 initAutoHide 中绑定，此处不再重复绑定，但保留以防万一
-        document.getElementById('menuAutoHideSettings').addEventListener('click', function(e) {
-            e.stopPropagation();
-            loadAutoHideSettings();
-            document.getElementById('autoHideModal').style.display = 'flex';
-        });
         document.getElementById('menuFullBackupWithImages').onclick = fullBackupWithImages;
         document.getElementById('menuFullRestoreWithImages').onclick = fullRestoreWithImages;
         document.getElementById('menuRestoreImagesFromFolder').onclick = restoreImagesFromFolder;
@@ -1636,9 +1542,7 @@
         document.getElementById('importFromExtensionBtn').onclick = importFromExtension;
         document.getElementById('autoImportToggleBtn').onclick = toggleAutoImport;
 
-        // 批量添加模态框
-        document.getElementById('closeBatchAddModalBtn').onclick = () => document.getElementById('batchAddModal').style.display = 'none';
-        document.getElementById('batchAddModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) document.getElementById('batchAddModal').style.display = 'none'; });
+        // 批量添加模态框（已单独绑定关闭事件）
         document.getElementById('parseBatchBtn').onclick = parseBatchMagnets;
         document.getElementById('clearBatchInputBtn').onclick = () => { document.getElementById('batchMagnetInput').value = ''; };
         document.getElementById('batchOfflineAllBtn').onclick = async () => {
@@ -1647,6 +1551,7 @@
                 if (batchItems[i].status === 'success') continue;
                 try { await sendToPikPakViaBridge(batchItems[i].magnet); batchItems[i].status = 'success'; } catch (err) { batchItems[i].status = 'error'; }
                 renderBatchList();
+                saveBatchItemsToStorage();
                 await new Promise(r => setTimeout(r, 500));
             }
             showToast('批量离线完成');
@@ -1684,6 +1589,7 @@
                     failCount++;
                 }
                 renderBatchList();
+                saveBatchItemsToStorage();
                 await new Promise(r => setTimeout(r, 300));
             }
             showToast(`批量保存完成：成功 ${successCount} 项，失败 ${failCount} 项`, failCount > 0);
@@ -1715,6 +1621,7 @@
                     failCount++;
                 }
                 renderBatchList();
+                saveBatchItemsToStorage();
                 await new Promise(r => setTimeout(r, 500));
             }
             showToast(`批量离线并保存完成：成功 ${successCount} 项，失败 ${failCount} 项`, failCount > 0);
@@ -1724,6 +1631,7 @@
             if (confirm('确定删除列表中的所有磁力吗？')) {
                 batchItems = [];
                 renderBatchList();
+                saveBatchItemsToStorage();
                 document.getElementById('batchParseResult').style.display = 'none';
                 showToast('已清空列表');
             }
@@ -1781,7 +1689,7 @@
         };
     }
 
-    // ------------------------------ 初始化 ------------------------------
+    // ========================== 初始化 ==========================
     (async function init(){
         try{
             if (document.documentElement.getAttribute('data-extension-installed') === 'true') {
@@ -1843,14 +1751,12 @@
             if (savedInterval) { const intervalInput = document.getElementById('autoImportInterval'); if (intervalInput) intervalInput.value = savedInterval; }
             const autoRunning = localStorage.getItem('autoImportRunning') === 'true';
             if (autoRunning) { setTimeout(() => { startAutoImport(); }, 500); }
-            initAutoHide();
             console.log('初始化完成，所有按钮功能正常。');
         } catch(err){
             console.error(err);
             alert('初始化失败，请刷新页面重试。错误：'+err.message);
         }
     })();
-
 })();
 </script>
 </body>
