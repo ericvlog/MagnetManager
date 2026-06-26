@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>磁力管理器 · GIS 同步修复版</title>
+    <title>磁力管理器 · GIS 同步（含库加载修复）</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js"></script>
+    <!-- 使用两个 CDN 源加载 idb-free-sync，自动 fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js';"></script>
     <style>
+        /* ===== 样式（与之前保持一致） ===== */
         :root {
             --bg-body: #f1f5f9; --bg-sidebar: white; --border-color: #e2e8f0; --text-primary: #0f172a;
             --text-secondary: #334155; --card-bg: white; --card-border: #e2e8f0; --tag-bg: #e6f0f2;
@@ -457,7 +459,6 @@
                 },
                 error_callback: (error) => {
                     console.error('Token Client 错误:', error);
-                    // 如果错误是弹窗被阻止，提示用户允许弹窗
                     if (error.type === 'popup_failed_to_open') {
                         alert('弹窗被阻止，请允许此站点弹出窗口，然后再次点击登录。');
                     }
@@ -470,6 +471,12 @@
             console.error('初始化 Token Client 失败:', e);
             return false;
         }
+    }
+
+    // 检查同步库是否加载
+    function isSyncLibLoaded() {
+        return (typeof window['idb-free-sync'] !== 'undefined' &&
+                typeof window['idb-free-sync'].createSync === 'function');
     }
 
     // 登录（用户点击触发）
@@ -486,9 +493,9 @@
                 return;
             }
         }
-        // 请求 token（会弹出授权窗口）
+        // 请求 token
         tokenClient.requestAccessToken({
-            prompt: 'consent',   // 强制显示同意界面，确保获得 refresh token
+            prompt: 'consent',
             include_granted_scopes: true
         });
     }
@@ -511,11 +518,15 @@
             updateCloudStatus('offline', '无 token');
             return;
         }
-        // 检查 idb-free-sync 是否加载
-        if (typeof window['idb-free-sync'] === 'undefined' || typeof window['idb-free-sync'].createSync !== 'function') {
+        if (!isSyncLibLoaded()) {
             updateCloudStatus('offline', '同步库未加载');
-            alert('同步库 (idb-free-sync) 未加载，请检查网络连接后刷新页面。');
-            return;
+            // 尝试重新加载库
+            showToast('同步库未加载，尝试重新加载...', true);
+            await loadSyncLibrary();
+            if (!isSyncLibLoaded()) {
+                alert('同步库加载失败，请检查网络连接后刷新页面重试。');
+                return;
+            }
         }
 
         try {
@@ -532,10 +543,7 @@
                     { name: 'images', blobFields: ['blob'] },
                     { name: 'failList', blobFields: [] }
                 ],
-                getToken: () => {
-                    // 如果 token 过期，可尝试刷新（这里简单返回当前）
-                    return accessToken;
-                },
+                getToken: () => accessToken,
                 cloudFolder: 'MagnetManagerData'
             };
 
@@ -579,6 +587,31 @@
         }
     }
 
+    // 动态加载同步库（fallback）
+    function loadSyncLibrary() {
+        return new Promise((resolve, reject) => {
+            if (isSyncLibLoaded()) { resolve(); return; }
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js';
+            script.onload = () => {
+                if (isSyncLibLoaded()) resolve();
+                else reject(new Error('加载后库仍未定义'));
+            };
+            script.onerror = () => {
+                // 尝试备用源
+                const fallback = document.createElement('script');
+                fallback.src = 'https://unpkg.com/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js';
+                fallback.onload = () => {
+                    if (isSyncLibLoaded()) resolve();
+                    else reject(new Error('备用源加载失败'));
+                };
+                fallback.onerror = () => reject(new Error('所有 CDN 源均加载失败'));
+                document.head.appendChild(fallback);
+            };
+            document.head.appendChild(script);
+        });
+    }
+
     // 设置对话框
     function openSettingsModal() {
         document.getElementById('clientIdInput').value = getStoredClientId();
@@ -592,7 +625,6 @@
         if (!clientId.includes('.apps.googleusercontent.com')) { alert('客户端 ID 格式不正确，请检查'); return; }
         saveClientId(clientId);
         closeSettingsModal();
-        // 重置 tokenClient
         tokenClient = null;
         accessToken = null;
         isSignedIn = false;
@@ -608,7 +640,7 @@
         }
     }
 
-    // 初始化 GIS（仅创建 tokenClient，不自动请求）
+    // 初始化 GIS
     function initializeGoogleDrive() {
         const clientId = getStoredClientId();
         if (!clientId) {
@@ -623,7 +655,7 @@
         }
     }
 
-    // ===== 工具函数 =====
+    // ===== 工具函数（保持不变） =====
     function cleanTitle(title) { if (!title) return title; let t = title; for (const w of filterWords) { if (!w) continue; t = t.split(w).join(''); } return t.trim(); }
     function escapeHtml(s) { return s ? s.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;') : ''; }
     function showToast(msg, isError = false) {
@@ -2577,7 +2609,6 @@
         document.getElementById('cancelSettingsBtn').onclick = closeSettingsModal;
         document.getElementById('saveSettingsBtn').onclick = saveSettings;
         document.getElementById('settingsModal').addEventListener('click', (e) => { if (e.target===e.currentTarget) closeSettingsModal(); });
-        // 登录按钮由 updateCloudStatus 动态绑定
     }
 
     // ========================== 初始化 ==========================
@@ -2653,7 +2684,7 @@
             const autoRunning = localStorage.getItem('autoImportRunning') === 'true';
             if (autoRunning) setTimeout(() => startAutoImport(), 500);
 
-            console.log('✅ 初始化完成 (GIS 修复版)');
+            console.log('✅ 初始化完成 (GIS 修复版 + 库加载 fallback)');
         } catch(err) {
             console.error(err);
             alert('初始化失败，请刷新页面重试。错误：'+err.message);
