@@ -4,54 +4,24 @@
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>磁力管理器 · 完整功能版（GIS 云端同步）</title>
+    <title>磁力管理器 · GIS 同步修复版</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- ===== 使用新的 Google Identity Services (GIS) 库 ===== -->
     <script src="https://accounts.google.com/gsi/client"></script>
-    <!-- ===== idb-free-sync (保持不变) ===== -->
     <script src="https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.0/dist/idb-free-sync.min.js"></script>
     <style>
-        /* ===== 完整样式（与之前一致） ===== */
         :root {
-            --bg-body: #f1f5f9;
-            --bg-sidebar: white;
-            --border-color: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-secondary: #334155;
-            --card-bg: white;
-            --card-border: #e2e8f0;
-            --tag-bg: #e6f0f2;
-            --tag-hover: #cbd5e1;
-            --filter-bar-bg: white;
-            --btn-bg: white;
-            --btn-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            --modal-bg: white;
-            --input-bg: white;
-            --input-border: #cbd5e1;
-            --drag-header-bg: #f8fafc;
-            --stats-badge-bg: #0f3b3f;
-            --stats-badge-text: white;
+            --bg-body: #f1f5f9; --bg-sidebar: white; --border-color: #e2e8f0; --text-primary: #0f172a;
+            --text-secondary: #334155; --card-bg: white; --card-border: #e2e8f0; --tag-bg: #e6f0f2;
+            --tag-hover: #cbd5e1; --filter-bar-bg: white; --btn-bg: white; --btn-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            --modal-bg: white; --input-bg: white; --input-border: #cbd5e1; --drag-header-bg: #f8fafc;
+            --stats-badge-bg: #0f3b3f; --stats-badge-text: white;
         }
-        body.dark {
-            --bg-body: #0f172a;
-            --bg-sidebar: #1e293b;
-            --border-color: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e6;
-            --card-bg: #1e293b;
-            --card-border: #334155;
-            --tag-bg: #334155;
-            --tag-hover: #475569;
-            --filter-bar-bg: #1e293b;
-            --btn-bg: #334155;
-            --btn-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            --modal-bg: #1e293b;
-            --input-bg: #0f172a;
-            --input-border: #475569;
-            --drag-header-bg: #0f172a;
-            --stats-badge-bg: #0f3b3f;
-            --stats-badge-text: #e2e8f0;
+        body.dark { --bg-body: #0f172a; --bg-sidebar: #1e293b; --border-color: #334155; --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e6; --card-bg: #1e293b; --card-border: #334155; --tag-bg: #334155;
+            --tag-hover: #475569; --filter-bar-bg: #1e293b; --btn-bg: #334155; --btn-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            --modal-bg: #1e293b; --input-bg: #0f172a; --input-border: #475569; --drag-header-bg: #0f172a;
+            --stats-badge-bg: #0f3b3f; --stats-badge-text: #e2e8f0;
         }
         * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui, -apple-system, sans-serif; }
         body { background: var(--bg-body); transition: background 0.2s; color: var(--text-primary); }
@@ -266,7 +236,6 @@
         body.dark .card-preview-actions .btn-outline { background:#1e293b; border-color:#334155; color:#f1f5f9; }
         body.dark .card-preview-actions .btn-outline:hover { background:#334155; }
 
-        /* 云端状态 - 左上角侧边栏头部 */
         .cloud-status {
             display: flex;
             align-items: center;
@@ -313,14 +282,13 @@
         <div class="sidebar-header">
             <div class="sidebar-logo">⚡ 磁力管理器</div>
             <div style="display:flex; gap:6px; align-items:center;">
-                <!-- 云端状态 + 登录/设置 -->
                 <span class="cloud-status" id="cloudStatus">
                     <span class="dot idle" id="cloudDot"></span>
                     <span id="cloudText">未连接</span>
                     <button class="btn-link" id="cloudLoginBtn">登录</button>
                     <button class="btn-link" id="cloudSettingsBtn">⚙️</button>
                 </span>
-                <button id="themeToggleBtn" class="theme-switch-btn" title="切换白天/夜晚模式">🌙</button>
+                <button id="themeToggleBtn" class="theme-switch-btn">🌙</button>
                 <button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button>
             </div>
         </div>
@@ -353,7 +321,7 @@
             <button class="btn btn-success" id="topImportClipboardBtn">📋 从剪贴板导入</button>
             <button id="importFromExtensionBtn" class="btn" style="background:#306eff;color:white;"><i class="fas fa-cloud-download-alt"></i> 从扩展导入队列</button>
             <div class="auto-import-group">
-                <input type="number" id="autoImportInterval" value="10" min="0.1" step="0.1" title="间隔分钟数（支持小数）">
+                <input type="number" id="autoImportInterval" value="10" min="0.1" step="0.1">
                 <span style="font-size:0.8rem; color:var(--text-secondary);">分钟</span>
                 <button id="autoImportToggleBtn" class="btn" style="background:#10b981; color:white; white-space:nowrap;"><i class="fas fa-play"></i> 启动</button>
                 <label style="font-size:0.8rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><input type="checkbox" id="clearAfterImport" checked> 清空队列</label>
@@ -372,10 +340,10 @@
         <div id="loadMoreTrigger" class="loading-trigger" style="display: none;">向下滚动加载更多...</div>
     </div>
 </div>
-<button id="floatImportBtn" class="float-import-btn" title="从剪贴板导入磁力链接 JSON"><i class="fas fa-paste"></i><span>导入</span></button>
+<button id="floatImportBtn" class="float-import-btn"><i class="fas fa-paste"></i><span>导入</span></button>
 <div class="floating-controls"><div id="floatingBatchBar" class="batch-bar"><span id="selectedCount">已选择 0 个卡片</span><div class="batch-actions"><button id="batchAddTagsBtn" class="btn btn-primary">🏷️ 批量添加标签</button><button id="batchCopyLinksBtn" class="btn btn-success">🔗 批量复制链接</button><button id="batchSaveImagesBtn" class="btn btn-primary" style="background:#0f3b3f;">💾 批量存本地</button><button id="batchDeleteBtn" class="btn btn-danger">🗑️ 批量删除</button><button id="selectAllCurrentBtn" class="btn btn-outline">✔️ 全选当前视图</button><button id="selectAllFilteredBtn" class="btn btn-outline">⭐ 全选全部筛选结果</button><button id="cancelSelectionBtn" class="btn btn-outline">❌ 取消选择</button></div></div></div>
 
-<!-- ===== 所有模态框 ===== -->
+<!-- 模态框 -->
 <div id="batchCopyModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>📋 批量磁力链接</h3><button id="closeBatchCopyModalBtn" class="icon-btn">✖</button></div><div style="padding:1rem;"><div id="batchLinksContainer" class="batch-links-container"></div><div style="display:flex;justify-content:flex-end;gap:12px;margin-top:1rem;"><button id="copyAllBatchLinksBtn" class="btn btn-primary">📋 复制全部</button><button id="cancelBatchCopyBtn" class="btn btn-outline">关闭</button></div></div></div></div>
 <div id="filterWordsModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>✂️ 管理标题过滤词</h3><button id="closeFilterWordsModalBtn" class="icon-btn">✖</button></div><div style="padding:1rem;"><div class="word-list-container" id="filterWordsList"></div><div class="add-word-input"><input type="text" id="newFilterWord" placeholder="例如: 【U5A5.COM】" /><button id="addFilterWordBtn" class="btn btn-primary">➕ 添加</button></div></div></div></div>
 <div id="failListModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>⚠️ 转换失败的图片列表</h3><button id="closeFailModalBtn" class="icon-btn">✖</button></div><div style="padding:1rem;"><div style="display:flex;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><button id="retryAllFailBtn" class="retry-all-btn">🔄 全部重试</button><button id="deleteAllFailCardsBtn" class="delete-all-fail-btn">🗑️ 删除全部失败卡片</button><button id="copyFailListBtn" class="btn btn-primary">📋 复制所有磁力链接</button></div><div id="failListContainer" class="fail-list-container"></div><div style="margin-top:1rem;display:flex;justify-content:flex-end;gap:8px;"><button id="closeFailModalBtn2" class="btn btn-outline">关闭</button></div></div></div></div>
@@ -388,7 +356,6 @@
 <div id="duplicateModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>清理重复项</h3><button id="closeDuplicateModalBtn" class="icon-btn">✖</button></div><div class="duplicate-list"><div class="duplicate-mode-selector"><span>检测模式：</span><label><input type="radio" name="dupMode" value="magnet" checked> 按磁力链接</label><label><input type="radio" name="dupMode" value="title"> 按标题</label></div><div class="similarity-control" id="similarityControl"><span>相似度阈值：</span><input type="range" id="similaritySlider" min="70" max="100" value="80" step="1"><span id="similarityValue">80%</span><span style="font-size:0.7rem;"> (仅按标题模式)</span></div><div id="duplicateGroupsContainer"></div><div style="display:flex;justify-content:flex-end;gap:12px;margin-top:1rem;"><button id="applyDuplicateResolutionBtn" class="btn btn-primary">全局应用</button><button id="cancelDuplicateBtn" class="btn btn-outline">取消</button></div></div></div></div>
 <div id="batchAddModal" class="modal"><div class="modal-card" style="max-width:850px;"><div class="flex-between"><h3>📥 批量添加磁力</h3><button id="closeBatchAddModalBtn" class="icon-btn">✖</button></div><div style="padding:1rem;"><div style="margin-bottom:12px;border-bottom:1px solid var(--border-color);padding-bottom:12px;"><span style="font-size:0.9rem;color:var(--text-secondary);">📋 粘贴多个磁力链接（每行一个）</span></div><div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;"><textarea id="batchMagnetInput" placeholder="每行一个磁力链接" style="flex:1;min-height:100px;padding:8px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);font-family:monospace;"></textarea><div style="display:flex;flex-direction:column;gap:6px;justify-content:center;"><button id="parseBatchBtn" class="btn btn-primary">🔍 解析</button><button id="clearBatchInputBtn" class="btn btn-outline">清空</button></div></div><div id="batchParseResult" style="margin-top:12px;max-height:55vh;overflow-y:auto;border:1px solid var(--border-color);border-radius:12px;padding:8px;display:none;"><div id="batchItemList"></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color);"><button id="batchOfflineAllBtn" class="btn btn-primary">📥 全部离线</button><button id="batchSaveAllBtn" class="btn btn-success">💾 全部保存</button><button id="batchBothAllBtn" class="btn btn-primary" style="background:#0f3b3f;">⚡ 全部离线并保存</button><button id="batchDeleteAllBtn" class="btn btn-danger">🗑️ 全部删除</button></div></div></div></div></div>
 
-<!-- ===== 设置模态框（Google Client ID） ===== -->
 <div id="settingsModal" class="modal">
     <div class="modal-card">
         <div class="flex-between">
@@ -464,14 +431,9 @@
         }
     }
 
-    // 获取最新的 access token（用于 idb-free-sync）
-    function getAccessToken() {
-        if (accessToken) return accessToken;
-        // 如果 token 不存在，尝试通过 tokenClient 获取
-        return null;
-    }
+    function getAccessToken() { return accessToken; }
 
-    // 初始化 Token Client (GIS)
+    // 初始化 Token Client
     function initTokenClient(clientId) {
         if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
             console.warn('Google Identity Services 库未加载');
@@ -486,7 +448,6 @@
                         accessToken = response.access_token;
                         isSignedIn = true;
                         updateCloudStatus('online', '已登录');
-                        // 启动同步
                         startSync();
                     } else if (response.error) {
                         console.error('Token 获取失败:', response.error);
@@ -496,6 +457,10 @@
                 },
                 error_callback: (error) => {
                     console.error('Token Client 错误:', error);
+                    // 如果错误是弹窗被阻止，提示用户允许弹窗
+                    if (error.type === 'popup_failed_to_open') {
+                        alert('弹窗被阻止，请允许此站点弹出窗口，然后再次点击登录。');
+                    }
                     updateCloudStatus('offline', '认证错误');
                     isSignedIn = false;
                 }
@@ -507,7 +472,7 @@
         }
     }
 
-    // 登录：调用 tokenClient 请求 token
+    // 登录（用户点击触发）
     function signIn() {
         if (!tokenClient) {
             const clientId = getStoredClientId();
@@ -521,67 +486,40 @@
                 return;
             }
         }
-        // 请求 token（会弹出登录窗口）
+        // 请求 token（会弹出授权窗口）
         tokenClient.requestAccessToken({
-            prompt: 'consent', // 强制要求离线 access token
+            prompt: 'consent',   // 强制显示同意界面，确保获得 refresh token
             include_granted_scopes: true
         });
     }
 
     // 登出
     function signOut() {
-        if (tokenClient) {
-            // GIS 没有直接的登出 API，我们可以清除本地 token 并通知用户
-            accessToken = null;
-            isSignedIn = false;
-            if (syncInstance) {
-                syncInstance.stop();
-                syncInstance = null;
-            }
-            updateCloudStatus('idle', '未连接');
-            // 可选：撤销 token (需要额外 API)
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-                // 可调用 disableAutoSelect 等
-            }
-            showToast('已登出');
+        accessToken = null;
+        isSignedIn = false;
+        if (syncInstance) {
+            syncInstance.stop();
+            syncInstance = null;
         }
+        updateCloudStatus('idle', '未连接');
+        showToast('已登出');
     }
 
     // 启动同步
     async function startSync() {
         if (!accessToken) {
-            // 尝试获取 token
-            if (tokenClient) {
-                try {
-                    await new Promise((resolve, reject) => {
-                        tokenClient.requestAccessToken({
-                            prompt: '', // 不弹出，使用缓存
-                            include_granted_scopes: true
-                        });
-                        // 回调会设置 accessToken
-                        const check = setInterval(() => {
-                            if (accessToken) {
-                                clearInterval(check);
-                                resolve();
-                            }
-                        }, 200);
-                        setTimeout(() => { clearInterval(check); reject(new Error('获取 token 超时')); }, 5000);
-                    });
-                } catch(e) {
-                    updateCloudStatus('offline', '获取 token 失败');
-                    return;
-                }
-            } else {
-                updateCloudStatus('offline', '未初始化');
-                return;
-            }
+            updateCloudStatus('offline', '无 token');
+            return;
+        }
+        // 检查 idb-free-sync 是否加载
+        if (typeof window['idb-free-sync'] === 'undefined' || typeof window['idb-free-sync'].createSync !== 'function') {
+            updateCloudStatus('offline', '同步库未加载');
+            alert('同步库 (idb-free-sync) 未加载，请检查网络连接后刷新页面。');
+            return;
         }
 
         try {
             const { createSync } = window['idb-free-sync'];
-            if (typeof createSync === 'undefined') {
-                throw new Error('idb-free-sync 库未加载');
-            }
             updateCloudStatus('syncing', '同步中...');
 
             const options = {
@@ -595,13 +533,7 @@
                     { name: 'failList', blobFields: [] }
                 ],
                 getToken: () => {
-                    // 如果 token 过期，可以刷新，这里简单返回当前 token
-                    if (!accessToken) {
-                        // 尝试刷新
-                        if (tokenClient) {
-                            tokenClient.requestAccessToken({ prompt: '' });
-                        }
-                    }
+                    // 如果 token 过期，可尝试刷新（这里简单返回当前）
                     return accessToken;
                 },
                 cloudFolder: 'MagnetManagerData'
@@ -611,7 +543,6 @@
             syncInstance.on('synced', (changes) => {
                 console.log('同步完成，变更数量:', changes ? changes.length : 0);
                 updateCloudStatus('online', '已同步 ' + new Date().toLocaleTimeString());
-                // 刷新界面
                 updateFilteredList();
                 currentLoadedCount = 0;
                 renderLoadedCards();
@@ -661,17 +592,14 @@
         if (!clientId.includes('.apps.googleusercontent.com')) { alert('客户端 ID 格式不正确，请检查'); return; }
         saveClientId(clientId);
         closeSettingsModal();
-        // 重新初始化 Token Client
-        if (tokenClient) {
-            tokenClient = null;
-        }
+        // 重置 tokenClient
+        tokenClient = null;
         accessToken = null;
         isSignedIn = false;
         if (syncInstance) {
             syncInstance.stop();
             syncInstance = null;
         }
-        // 尝试用新 ID 初始化
         if (initTokenClient(clientId)) {
             updateCloudStatus('idle', '已更新，请登录');
         } else {
@@ -680,7 +608,7 @@
         }
     }
 
-    // 初始化 GIS
+    // 初始化 GIS（仅创建 tokenClient，不自动请求）
     function initializeGoogleDrive() {
         const clientId = getStoredClientId();
         if (!clientId) {
@@ -692,16 +620,6 @@
             alert('Google Identity Services 初始化失败，请检查 Client ID 是否正确');
         } else {
             updateCloudStatus('idle', '请登录');
-            // 检查是否已有 token（例如之前登录过）
-            // 我们可以尝试静默获取 token
-            if (tokenClient) {
-                // 通过 requestAccessToken 尝试静默获取
-                tokenClient.requestAccessToken({
-                    prompt: '', // 静默
-                    include_granted_scopes: true
-                });
-                // 回调会处理
-            }
         }
     }
 
@@ -2654,14 +2572,12 @@
             catch(err) { showToast('❌ 清空失败: '+err.message, true); }
         };
 
-        // 云端设置按钮（已绑定）
         document.getElementById('cloudSettingsBtn').onclick = openSettingsModal;
         document.getElementById('closeSettingsBtn').onclick = closeSettingsModal;
         document.getElementById('cancelSettingsBtn').onclick = closeSettingsModal;
         document.getElementById('saveSettingsBtn').onclick = saveSettings;
         document.getElementById('settingsModal').addEventListener('click', (e) => { if (e.target===e.currentTarget) closeSettingsModal(); });
-        // 登录按钮已在 updateCloudStatus 中动态绑定，初始调用一次
-        updateCloudStatus('idle', '请登录');
+        // 登录按钮由 updateCloudStatus 动态绑定
     }
 
     // ========================== 初始化 ==========================
@@ -2714,7 +2630,7 @@
             nextMagnetId = magnets.length ? Math.max(...magnets.map(m=>m.id),0)+1 : 1;
             if (autoTagRules.length===0) migrateOldRulesFromLocalStorage();
 
-            // 初始化 Google Identity Services
+            // 初始化 GIS（仅创建 tokenClient，不自动请求）
             initializeGoogleDrive();
 
             loadCollapsedState();
@@ -2737,7 +2653,7 @@
             const autoRunning = localStorage.getItem('autoImportRunning') === 'true';
             if (autoRunning) setTimeout(() => startAutoImport(), 500);
 
-            console.log('✅ 初始化完成 (使用 GIS)');
+            console.log('✅ 初始化完成 (GIS 修复版)');
         } catch(err) {
             console.error(err);
             alert('初始化失败，请刷新页面重试。错误：'+err.message);
