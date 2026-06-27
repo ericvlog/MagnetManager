@@ -1033,6 +1033,22 @@ function bindMagnetLinkEvents() {
             });
         });
     }
+function showCardPreview(magnetLink, title) {
+        const handler = (event) => {
+            if (event.data && event.data.type === 'MAGNET_PREVIEW_RESULT') {
+                window.removeEventListener('message', handler);
+                if (event.data.success) {
+                    const data = event.data.data;
+                    showPreviewPopup(magnetLink, title, data);
+                } else {
+                    showToast('❌ 预览失败: ' + (event.data.error || '未知错误'), true);
+                }
+            }
+        };
+        window.addEventListener('message', handler);
+        window.postMessage({ type: 'REQUEST_MAGNET_PREVIEW', magnet: magnetLink }, '*');
+        setTimeout(() => { window.removeEventListener('message', handler); }, 30000);
+    }
 
     // ===== 截图提取 =====
     function toWhatslinkImageUrl(value) {
