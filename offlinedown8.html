@@ -1200,6 +1200,8 @@ function initGDriveClient() {
             callback: (resp) => {
                 if (resp.access_token) {
                     gdriveToken = resp.access_token;
+                    // 保存 token 到 localStorage，实现持久登录
+                    localStorage.setItem('gdrive_token', resp.access_token);
                     document.getElementById('gdriveLoginBtn').textContent = '🔑 已登录';
                     document.getElementById('gdriveLoginBtn').style.background = '#34a853';
                     document.getElementById('gdriveBackupBtn').style.display = 'inline-block';
@@ -1208,6 +1210,7 @@ function initGDriveClient() {
                     findDriveBackupFile().then(id => { if (id) gdriveFileId = id; });
                 } else {
                     gdriveToken = null;
+                    localStorage.removeItem('gdrive_token');
                     document.getElementById('gdriveLoginBtn').textContent = '🔑 登录 Google Drive';
                     document.getElementById('gdriveLoginBtn').style.background = '#4285f4';
                     document.getElementById('gdriveBackupBtn').style.display = 'none';
@@ -1216,21 +1219,56 @@ function initGDriveClient() {
                 }
             }
         });
+
+        // 尝试从 localStorage 恢复登录状态
+        const savedToken = localStorage.getItem('gdrive_token');
+        if (savedToken) {
+            gdriveToken = savedToken;
+            document.getElementById('gdriveLoginBtn').textContent = '🔑 已登录';
+            document.getElementById('gdriveLoginBtn').style.background = '#34a853';
+            document.getElementById('gdriveBackupBtn').style.display = 'inline-block';
+            document.getElementById('gdriveRestoreBtn').style.display = 'inline-block';
+            document.getElementById('gdriveStatus').textContent = '已登录 (验证中...)';
+            // 验证 token 是否有效
+            findDriveBackupFile().then(id => {
+                if (id) {
+                    gdriveFileId = id;
+                    document.getElementById('gdriveStatus').textContent = '✅ 已登录 (有效)';
+                } else {
+                    // token 有效但无备份文件
+                    document.getElementById('gdriveStatus').textContent = '已登录 (无备份)';
+                }
+            }).catch(() => {
+                // token 无效或过期，清除
+                gdriveToken = null;
+                localStorage.removeItem('gdrive_token');
+                gdriveFileId = null;
+                document.getElementById('gdriveLoginBtn').textContent = '🔑 登录 Google Drive';
+                document.getElementById('gdriveLoginBtn').style.background = '#4285f4';
+                document.getElementById('gdriveBackupBtn').style.display = 'none';
+                document.getElementById('gdriveRestoreBtn').style.display = 'none';
+                document.getElementById('gdriveStatus').textContent = '会话已过期，请重新登录';
+                showToast('Google Drive 登录已过期，请重新登录', true);
+            });
+        }
     }
 
-    function loginGDrive() {
+function loginGDrive() {
         if (!gdriveClient) {
             alert('Google 登录库未初始化，请检查 client_id 设置');
             return;
         }
         if (gdriveToken) {
+            // 登出：清除 token 和 localStorage
             gdriveToken = null;
             gdriveFileId = null;
+            localStorage.removeItem('gdrive_token');
             document.getElementById('gdriveLoginBtn').textContent = '🔑 登录 Google Drive';
             document.getElementById('gdriveLoginBtn').style.background = '#4285f4';
             document.getElementById('gdriveBackupBtn').style.display = 'none';
             document.getElementById('gdriveRestoreBtn').style.display = 'none';
             document.getElementById('gdriveStatus').textContent = '已登出';
+            showToast('已登出 Google Drive');
             return;
         }
         gdriveClient.requestAccessToken({ prompt: 'consent' });
