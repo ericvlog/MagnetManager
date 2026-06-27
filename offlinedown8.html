@@ -8,8 +8,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
-    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
     <style>
+        /* ===== 完整样式（与之前一致） ===== */
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-sidebar: white;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --card-bg: white;
+            --card-border: #e2e8f0;
+            --tag-bg: #e6f0f2;
+            --tag-hover: #cbd5e1;
+<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
             --filter-bar-bg: white;
             --btn-bg: white;
             --btn-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -656,14 +667,6 @@
         <div class="sidebar-header">
             <div class="sidebar-logo">⚡ 磁力管理器</div>
             <div style="display: flex; gap: 8px;"><button id="themeToggleBtn" class="theme-switch-btn" title="切换白天/夜晚模式">🌙</button><button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button></div>
-<span class="cloud-status" id="cloudStatus">
-                <span class="dot idle" id="cloudDot"></span>
-                <span id="cloudText">未连接</span>
-                <button class="btn-link" id="cloudLoginBtn">登录</button>
-                <button class="btn-link" id="cloudSyncBtn">同步</button>
-                <button class="btn-link" id="cloudRestoreBtn">恢复</button>
-                <button class="btn-link" id="cloudSettingsBtn">⚙️</button>
-            </span>
         </div>
         <div class="sidebar-menu">
             <div class="menu-item" id="menuAddMagnet"><i class="fas fa-plus-circle"></i><span>➕ 添加磁力</span></div>
@@ -701,6 +704,10 @@
                 <label style="font-size:0.8rem; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><input type="checkbox" id="clearAfterImport" checked> 清空队列</label>
                 <span id="autoImportStatus" class="status-text">已停止</span>
             </div>
+<button id="gdriveLoginBtn" class="btn btn-primary" style="background:#4285f4;color:white;">🔑 登录 Google Drive</button>
+            <button id="gdriveBackupBtn" class="btn btn-success" style="display:none;">☁️ 备份到云端</button>
+            <button id="gdriveRestoreBtn" class="btn btn-primary" style="display:none;">☁️ 从云端恢复</button>
+            <span id="gdriveStatus" class="status-text" style="font-size:0.8rem;"></span>
         </div>
         <div class="drag-area" id="tagsDragArea"><div class="drag-header" data-target="tagsContent"><div class="drag-title"><i class="fas fa-hashtag"></i> 🏷️ 拖拽标签可排序（点击筛选）</div><i class="fas fa-chevron-down toggle-icon"></i></div><div class="drag-content" id="tagsContent"><div id="draggableTagsList" class="tags-container"></div></div></div>
         <div class="filter-bar">
@@ -730,365 +737,34 @@
 <div id="duplicateModal" class="modal"><div class="modal-card"><div class="flex-between"><h3>清理重复项</h3><button id="closeDuplicateModalBtn" class="icon-btn">✖</button></div><div class="duplicate-list"><div class="duplicate-mode-selector"><span>检测模式：</span><label><input type="radio" name="dupMode" value="magnet" checked> 按磁力链接</label><label><input type="radio" name="dupMode" value="title"> 按标题</label></div><div class="similarity-control" id="similarityControl"><span>相似度阈值：</span><input type="range" id="similaritySlider" min="70" max="100" value="80" step="1"><span id="similarityValue">80%</span><span style="font-size:0.7rem;"> (仅按标题模式)</span></div><div id="duplicateGroupsContainer"></div><div style="display:flex;justify-content:flex-end;gap:12px;margin-top:1rem;"><button id="applyDuplicateResolutionBtn" class="btn btn-primary">全局应用</button><button id="cancelDuplicateBtn" class="btn btn-outline">取消</button></div></div></div></div>
 <div id="batchAddModal" class="modal"><div class="modal-card" style="max-width:850px;"><div class="flex-between"><h3>📥 批量添加磁力</h3><button id="closeBatchAddModalBtn" class="icon-btn">✖</button></div><div style="padding:1rem;"><div style="margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;"><span style="font-size:0.9rem; color:var(--text-secondary);">📋 粘贴多个磁力链接（每行一个）</span></div><div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;"><textarea id="batchMagnetInput" placeholder="每行一个磁力链接" style="flex:1;min-height:100px;padding:8px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);font-family:monospace;"></textarea><div style="display:flex;flex-direction:column;gap:6px;justify-content:center;"><button id="parseBatchBtn" class="btn btn-primary">🔍 解析</button><button id="clearBatchInputBtn" class="btn btn-outline">清空</button></div></div><div id="batchParseResult" style="margin-top:12px;max-height:55vh;overflow-y:auto;border:1px solid var(--border-color);border-radius:12px;padding:8px;display:none;"><div id="batchItemList"></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color);"><button id="batchOfflineAllBtn" class="btn btn-primary">📥 全部离线</button><button id="batchSaveAllBtn" class="btn btn-success">💾 全部保存</button><button id="batchBothAllBtn" class="btn btn-primary" style="background:#0f3b3f;">⚡ 全部离线并保存</button><button id="batchDeleteAllBtn" class="btn btn-danger">🗑️ 全部删除</button></div></div></div></div></div>
 
-let tokenClient = null;
-    let accessToken = null;
-    let isSignedIn = false;
-    let syncInProgress = false;
-    let lastSyncTime = parseInt(localStorage.getItem('lastSyncTime') || '0');
-
-    function getStoredClientId() { return localStorage.getItem('googleClientId') || ''; }
-    function saveClientId(id) {
-        if (id && id.trim()) localStorage.setItem('googleClientId', id.trim());
-        else localStorage.removeItem('googleClientId');
-    }
-
-    function updateCloudStatus(status, text) {
-        const dot = document.getElementById('cloudDot');
-        const txt = document.getElementById('cloudText');
-        const loginBtn = document.getElementById('cloudLoginBtn');
-        if (!dot || !txt) return;
-        dot.className = 'dot ' + status;
-        txt.textContent = text;
-        if (status === 'online' || status === 'syncing') {
-            loginBtn.textContent = '登出';
-            loginBtn.onclick = signOut;
-        } else {
-            loginBtn.textContent = '登录';
-            loginBtn.onclick = signIn;
-        }
-    }
-
-    function initTokenClient(clientId) {
-        if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
-            console.warn('Google Identity Services 库未加载');
-            return false;
-        }
-        try {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: clientId,
-                scope: 'https://www.googleapis.com/auth/drive.file',
-                callback: (response) => {
-                    if (response.access_token) {
-                        accessToken = response.access_token;
-                        isSignedIn = true;
-                        updateCloudStatus('online', '已登录');
-                        showToast('登录成功，点击「同步」备份数据');
-                    } else if (response.error) {
-                        console.error('Token 获取失败:', response.error);
-                        updateCloudStatus('offline', '认证失败');
-                        isSignedIn = false;
-                    }
-                },
-                error_callback: (error) => {
-                    console.error('Token Client 错误:', error);
-                    if (error.type === 'popup_failed_to_open') {
-                        alert('弹窗被阻止，请允许此站点弹出窗口，然后再次点击登录。');
-                    }
-                    updateCloudStatus('offline', '认证错误');
-                    isSignedIn = false;
-                }
-            });
-            return true;
-        } catch (e) {
-            console.error('初始化 Token Client 失败:', e);
-            return false;
-        }
-    }
-
-    function signIn() {
-        if (!tokenClient) {
-            const clientId = getStoredClientId();
-            if (!clientId) {
-                alert('请先在设置中配置 Google Client ID');
-                openSettingsModal();
-                return;
-            }
-            if (!initTokenClient(clientId)) {
-                alert('Google Identity Services 初始化失败，请检查 Client ID 是否正确');
-                return;
-            }
-        }
-        tokenClient.requestAccessToken({
-            prompt: 'consent',
-            include_granted_scopes: true
-        });
-    }
-
-    function signOut() {
-        accessToken = null;
-        isSignedIn = false;
-        updateCloudStatus('idle', '未连接');
-        showToast('已登出');
-    }
-
-    async function syncToDrive(manual = true) {
-        if (!accessToken) {
-            showToast('请先登录', true);
-            return;
-        }
-        if (syncInProgress) {
-            showToast('同步正在进行中...', false);
-            return;
-        }
-
-        syncInProgress = true;
-        updateCloudStatus('syncing', '打包中...');
-
-        try {
-            // 使用现有的 fullBackupWithImages 逻辑生成 ZIP
-            const zip = new JSZip();
-
-            // 准备数据
-            const data = {
-                version: '1.0',
-                exportedAt: new Date().toISOString(),
-                magnets: magnets,
-                tags: tags,
-                autoTagRules: autoTagRules,
-                filterWords: filterWords,
-                tagOrder: tagOrder
-            };
-            zip.file('data.json', JSON.stringify(data, null, 2));
-
-            // 添加图片
-            const imagesFolder = zip.folder('images');
-            let imageCount = 0;
-            for (const m of magnets) {
-                if (m.imageUrl && m.imageUrl.startsWith('img_')) {
-                    const blob = await getImageBlob(m.imageUrl);
-                    if (blob) {
-                        const ext = blob.type.split('/')[1] || 'png';
-                        imagesFolder.file(`${m.imageUrl}.${ext}`, blob);
-                        imageCount++;
-                    }
-                }
-            }
-
-            showToast(`📤 打包完成，${imageCount} 张图片，正在上传...`, false);
-
-            const zipBlob = await zip.generateAsync({
-                type: 'blob',
-                compression: 'DEFLATE',
-                compressionOptions: { level: 6 }
-            });
-
-            // 查找已有文件
-            const query = "name='MagnetManager_Backup.zip' and trashed=false";
-            const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
-            const searchResp = await fetch(searchUrl, {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-            });
-            const searchResult = await searchResp.json();
-            const existingFile = searchResult.files && searchResult.files[0];
-
-            let uploadUrl, method, body;
-            if (existingFile) {
-                uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`;
-                method = 'PATCH';
-                body = zipBlob;
-            } else {
-                const metadata = {
-                    name: 'MagnetManager_Backup.zip',
-                    mimeType: 'application/zip'
-                };
-                const formData = new FormData();
-                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                formData.append('file', zipBlob);
-                uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-                method = 'POST';
-                body = formData;
-            }
-
-            const uploadResp = await fetch(uploadUrl, {
-                method: method,
-                headers: {
-                    'Authorization': 'Bearer ' + accessToken,
-                    ...(method === 'PATCH' ? { 'Content-Type': 'application/zip' } : {})
-                },
-                body: body
-            });
-
-            if (uploadResp.ok) {
-                lastSyncTime = Date.now();
-                localStorage.setItem('lastSyncTime', lastSyncTime);
-                showToast(`✅ 同步成功！${magnets.length} 个磁力，${imageCount} 张图片`);
-                updateCloudStatus('online', '已同步 ' + new Date().toLocaleTimeString());
-            } else {
-                const errText = await uploadResp.text();
-                console.error('同步失败:', errText);
-                showToast('❌ 同步失败: ' + errText, true);
-                updateCloudStatus('offline', '同步失败');
-            }
-        } catch (err) {
-            console.error('同步出错:', err);
-            showToast('❌ 同步出错: ' + err.message, true);
-            updateCloudStatus('offline', '同步出错');
-        } finally {
-            syncInProgress = false;
-        }
-    }
-
-    async function restoreFromDrive() {
-        if (!accessToken) {
-            showToast('请先登录', true);
-            return;
-        }
-        if (syncInProgress) {
-            showToast('操作正在进行中...', false);
-            return;
-        }
-        if (!confirm('将从 Google Drive 恢复数据，当前数据将被覆盖，确定吗？')) return;
-
-        syncInProgress = true;
-        updateCloudStatus('syncing', '下载中...');
-
-        try {
-            const query = "name='MagnetManager_Backup.zip' and trashed=false";
-            const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
-            const searchResp = await fetch(searchUrl, {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-            });
-            const searchResult = await searchResp.json();
-            const file = searchResult.files && searchResult.files[0];
-            if (!file) {
-                showToast('未找到云端备份文件', true);
-                updateCloudStatus('idle', '未找到备份');
-                return;
-            }
-
-            showToast('📥 正在下载...', false);
-            const downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
-            const downloadResp = await fetch(downloadUrl, {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-            });
-            if (!downloadResp.ok) {
-                const errText = await downloadResp.text();
-                showToast('下载失败: ' + errText, true);
-                return;
-            }
-
-            const zipBlob = await downloadResp.blob();
-            showToast('📦 正在解压恢复...', false);
-
-            // 复用 fullRestoreWithImages 的解压逻辑
-            const zip = await JSZip.loadAsync(zipBlob);
-            const dataFile = zip.file('data.json');
-            if (!dataFile) { throw new Error('备份文件中缺少 data.json'); }
-
-            const text = await dataFile.async('text');
-            const data = JSON.parse(text);
-            if (!data.magnets) { throw new Error('无效的备份文件'); }
-
-            magnets = data.magnets || [];
-            tags = data.tags || [];
-            autoTagRules = data.autoTagRules || [];
-            filterWords = data.filterWords || [];
-            tagOrder = data.tagOrder || [];
-
-            nextTagId = tags.length ? Math.max(...tags.map(t => t.id), 0) + 1 : 1;
-            nextMagnetId = magnets.length ? Math.max(...magnets.map(m => m.id), 0) + 1 : 1;
-            selectedCardIds.clear();
-            saveTagOrder();
-
-            // 恢复图片
-            const imageFiles = Object.keys(zip.files).filter(f => f.startsWith('images/') && !f.endsWith('/'));
-            let restoredImages = 0;
-            const tx = db.transaction([STORES.images], 'readwrite');
-            const store = tx.objectStore(STORES.images);
-            await new Promise((resolve, reject) => {
-                const clearReq = store.clear();
-                clearReq.onsuccess = resolve;
-                clearReq.onerror = reject;
-            });
-            imageBlobCache.clear();
-
-            for (const name of imageFiles) {
-                const parts = name.split('/');
-                const fileName = parts[parts.length - 1];
-                const id = fileName.split('.')[0];
-                if (id && id.startsWith('img_')) {
-                    try {
-                        const content = await zip.file(name).async('blob');
-                        if (content && content.size > 0) {
-                            await new Promise((resolve, reject) => {
-                                const putTx = db.transaction([STORES.images], 'readwrite');
-                                const putStore = putTx.objectStore(STORES.images);
-                                const req = putStore.put({ id: id, blob: content, url: id, timestamp: Date.now() });
-                                req.onsuccess = resolve;
-                                req.onerror = reject;
-                            });
-                            restoredImages++;
-                        }
-                    } catch(e) { console.warn('恢复图片失败:', name, e); }
-                }
-            }
-
-            await saveToDB();
-            await saveFilterWordsToDB();
-            await saveFailListToDB();
-
-            updateFilteredList();
-            currentLoadedCount = 0;
-            await renderLoadedCards();
-            updateStats(allFilteredMagnets.length, magnets.length);
-            renderDraggable();
-            renderTagManagementList();
-            renderFilterWordsList();
-            refreshRuleTagSelect();
-            renderRulesList();
-
-            showToast(`✅ 恢复成功！${magnets.length} 个磁力，${restoredImages} 张图片`);
-            updateCloudStatus('online', '已恢复 ' + new Date().toLocaleTimeString());
-        } catch (err) {
-            console.error('恢复失败:', err);
-            showToast('❌ 恢复失败: ' + err.message, true);
-            updateCloudStatus('offline', '恢复失败');
-        } finally {
-            syncInProgress = false;
-        }
-    }
-
-    function manualSync() {
-        syncToDrive(true);
-    }
-
-    // 设置对话框
-    function openSettingsModal() {
-        document.getElementById('clientIdInput').value = getStoredClientId();
-        document.getElementById('settingsModal').style.display = 'flex';
-    }
-    function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
-
-    function saveSettings() {
-        const clientId = document.getElementById('clientIdInput').value.trim();
-        if (!clientId) { alert('请输入有效的 Google OAuth 客户端 ID'); return; }
-        if (!clientId.includes('.apps.googleusercontent.com')) { alert('客户端 ID 格式不正确，请检查'); return; }
-        saveClientId(clientId);
-        closeSettingsModal();
-        tokenClient = null;
-        accessToken = null;
-        isSignedIn = false;
-        if (initTokenClient(clientId)) {
-            updateCloudStatus('idle', '已更新，请登录');
-        } else {
-            updateCloudStatus('offline', 'Client ID 无效');
-            alert('Client ID 无效，请检查');
-        }
-    }
-
-    function initializeGoogleDrive() {
-        const clientId = getStoredClientId();
-        if (!clientId) {
-            updateCloudStatus('idle', '请设置 Client ID');
-            return;
-        }
-        if (!initTokenClient(clientId)) {
-            updateCloudStatus('offline', 'Client ID 无效');
-            alert('Google Identity Services 初始化失败，请检查 Client ID 是否正确');
-        } else {
-            updateCloudStatus('idle', '请登录');
-        }
-    }
+<script>
+(function(){
+    // ========================== 基础配置 ==========================
+    const DB_NAME = 'MagnetManagerDB';
+    const DB_VERSION = 6;
+    const STORES = { tags: 'tags', magnets: 'magnets', autoTagRules: 'autoTagRules', filterWords: 'filterWords', images: 'images', failList: 'failList' };
+    let db = null;
+    let tags = [{ id: 1, name: "4K" }, { id: 2, name: "HDR" }, { id: 3, name: "蓝光原盘" }];
+    let magnets = [];
+    let autoTagRules = [];
+    let filterWords = [];
+    let failList = [];
+    let nextTagId = 4, nextMagnetId = 1;
+    let currentRatingFilter = 0;
+    let collapsedTags = false;
+    let selectionMode = false;
+    let selectedCardIds = new Set();
+    let currentLoadedCount = 0;
+    let pageSize = 50;
+    let isLoadingMore = false;
+    let allFilteredMagnets = [];
+    let scrollListener = null;
+    let dragSrcIndex = null;
+    let lastSelectedCardId = null;
+    let tagOrder = [];
+    let originalHrefs = [];
+    let imageBlobCache = new Map();
+    let batchItems = [];
 
     // ===== 工具函数 =====
     function cleanTitle(title) { if (!title) return title; let newTitle = title; for (const word of filterWords) { if (!word) continue; newTitle = newTitle.split(word).join(''); } return newTitle.trim(); }
@@ -1155,38 +831,48 @@ let tokenClient = null;
     // ===== 批量复制 =====
     function disableCardMagnetLinks(){ const links=document.querySelectorAll('.magnet-link'); originalHrefs=[]; links.forEach(link=>{ if(link.getAttribute('href')&&link.getAttribute('href').startsWith('magnet:')){ originalHrefs.push({link,href:link.getAttribute('href'),display:link.style.display}); link.removeAttribute('href'); link.style.display='none'; } }); }
     function restoreCardMagnetLinks(){ originalHrefs.forEach(item=>{ item.link.setAttribute('href',item.href); item.link.style.display=item.display||''; item.link.style.cursor='pointer'; item.link.style.opacity=''; item.link.title=''; }); originalHrefs=[]; }
-    function batchCopyLinksWithModal(){ if(selectedCardIds.size===0){ alert('请先选择卡片'); return; } const links=[]; for(const id of selectedCardIds){ const m=magnets.find(m=>m.id===id); if(m&&m.magnetLink) links.push(m.magnetLink); } if(links.length===0){ alert('没有可复制的链接'); return; } disableCardMagnetLinks(); const container=document.getElementById('batchLinksContainer'); container.innerHTML=''; links.forEach(link=>{ const a=document.createElement('a'); a.href=link; a.className='batch-link-item'; a.textContent=link; a.title='点击调用 PikPak 扩展或系统处理程序'; container.appendChild(a); }); document.getElementById('batchCopyModal').style.display='flex'; }
-    function bindModalRestore(){ const modal=document.getElementById('batchCopyModal'); const closeBtn=document.getElementById('closeBatchCopyModalBtn'); const cancelBtn=document.getElementById('cancelBatchCopyBtn'); const restore=()=>{ modal.style.display='none'; restoreCardMagnetLinks(); }; closeBtn.onclick=restore; cancelBtn.onclick=restore; modal.addEventListener('click',(e)=>{if(e.target===modal) restore();}); }
-    function bindMagnetLinkEvents(){ document.querySelectorAll('.magnet-link').forEach(el=>{ if(el.hasAttribute('data-bound')) return; el.setAttribute('data-bound','true'); const url=el.getAttribute('href'); if(!url) return; el.addEventListener('click',(e)=>{ copyMagnetLink(url); }); }); }
-    function initHideImageButton(){ const btn=document.getElementById('hideImageBtn'); btn.addEventListener('click',()=>{ document.body.classList.toggle('hide-images'); const hidden=document.body.classList.contains('hide-images'); btn.innerHTML=hidden?'<i class="fas fa-eye"></i> 显示图片':'<i class="fas fa-image"></i> 隐藏图片'; }); }
-
-    // ===== 评分筛选 =====
-    function updateRatingFilterUI(){ const stars=document.querySelectorAll('#ratingFilter i'); stars.forEach(star=>{ const r=parseInt(star.dataset.rating); if(currentRatingFilter>0&&r<=currentRatingFilter) star.className='fas fa-star active'; else star.className='far fa-star'; }); }
-    function setupRatingFilter(){ const stars=document.querySelectorAll('#ratingFilter i'); stars.forEach(star=>{ star.addEventListener('click',()=>{ const r=parseInt(star.dataset.rating); currentRatingFilter=(currentRatingFilter===r)?0:r; updateRatingFilterUI(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); }); document.getElementById('clearRatingFilter').addEventListener('click',()=>{ currentRatingFilter=0; updateRatingFilterUI(); updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); }
-
-    // ========================== 核心渲染（含预览按钮） ==========================
-    function updateFilteredList(){ const search=document.getElementById('searchInput').value.toLowerCase(); let filtered=magnets.filter(m=>{ if(search){ const titleMatch=m.title.toLowerCase().includes(search); const tagMatch=m.tagIds.some(tid=>tags.find(t=>t.id===tid)?.name.toLowerCase().includes(search)); if(!titleMatch&&!tagMatch) return false; } if(currentRatingFilter>0&&m.rating!==currentRatingFilter) return false; return true; }); filtered.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); allFilteredMagnets=filtered; }
-    async function renderLoadedCards(){ const container=document.getElementById('magnetGridContainer'); const loaded=allFilteredMagnets.slice(0,currentLoadedCount); if(loaded.length===0&&allFilteredMagnets.length>0){ currentLoadedCount=Math.min(pageSize,allFilteredMagnets.length); return renderLoadedCards(); } if(loaded.length===0){ container.innerHTML='<div style="text-align:center;padding:2rem">暂无磁力</div>'; document.getElementById('loadMoreTrigger').style.display='none'; return; } container.innerHTML=loaded.map(m=>{ let tagSpans=m.tagIds.map(tid=>tags.find(t=>t.id===tid)).filter(t=>t).map(t=>`<span class="tag">${escapeHtml(t.name)}</span>`).join(''); let stars=''; for(let i=1;i<=5;i++) stars+=`<i class="${i<=m.rating?'fas fa-star active':'far fa-star'}" data-rating="${i}"></i>`; const checked=selectedCardIds.has(m.id)?'checked':''; const shortLink=m.magnetLink.length>45?m.magnetLink.substring(0,45)+'...':m.magnetLink; const isLocal=m.imageUrl&&m.imageUrl.startsWith('img_'); const badge=isLocal?'<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>':(m.imageUrl?'<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>':''); return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\" viewBox=\"0 0 400 200\"%3E%3Crect width=\"400\" height=\"200\" fill=\"%23e2e8f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" font-family=\"Arial\" font-size=\"16\" fill=\"%23475569\" text-anchor=\"middle\" dy=\".3em\"%3ELoading...%3C/text%3E%3C/svg%3E')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn preview-card-btn" data-magnet="${escapeHtml(m.magnetLink)}" data-title="${escapeHtml(m.title)}" title="预览磁力"><i class="fas fa-eye"></i> 预览</button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`; }).join(''); if(selectionMode){ document.querySelectorAll('.card-checkbox').forEach(cb=>{ cb.addEventListener('change',(e)=>{ e.stopPropagation(); const id=parseInt(cb.dataset.id); if(cb.checked) selectedCardIds.add(id); else selectedCardIds.delete(id); updateSelectedCount(); }); }); } document.querySelectorAll('.star-rating').forEach(div=>{ const mid=parseInt(div.dataset.id); const m=magnets.find(m=>m.id===mid); if(!m) return; const stars=div.querySelectorAll('i'); stars.forEach((star,idx)=>{ star.addEventListener('click',(e)=>{ e.stopPropagation(); let newRating=idx+1; if(m.rating===newRating) newRating=0; if(m.rating!==newRating){ m.rating=newRating; saveToDB().then(()=>{ updateFilteredList(); currentLoadedCount=0; renderLoadedCards(); updateStats(allFilteredMagnets.length,magnets.length); }); } }); }); }); document.querySelectorAll('.copy-magnet').forEach(btn=>btn.addEventListener('click',(e)=>{ e.stopPropagation(); copyMagnetLink(btn.getAttribute('data-magnet')); })); document.querySelectorAll('.preview-img').forEach(div=>{ div.addEventListener('click',(e)=>{ e.stopPropagation(); const url=div.getAttribute('data-img-url'); if(url) showImagePreview(url); }); }); document.querySelectorAll('.save-image-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const id= parseInt(btn.getAttribute('data-id')); await saveImageToLocal(id,false); updateFilteredList(); currentLoadedCount=0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }); }); document.querySelectorAll('.send-pikpak-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation(); const magnet = btn.getAttribute('data-magnet'); try { await sendToPikPakViaBridge(magnet); showToast('✅ 已发送到 PikPak，任务创建成功！'); } catch (err) { showToast('❌ ' + err.message, true); } }); }); document.querySelectorAll('.preview-card-btn').forEach(btn=>{ btn.addEventListener('click',(e)=>{ e.stopPropagation(); const magnet = btn.getAttribute('data-magnet'); const title = btn.getAttribute('data-title') || '未知资源'; showCardPreview(magnet, title); }); }); bindMagnetLinkEvents(); for(const card of container.querySelectorAll('.magnet-card')){ const mid=parseInt(card.getAttribute('data-id')); const m=magnets.find(m=>m.id===mid); if(m){ const url=await getImageUrlForCard(m); const preview=card.querySelector('.preview-img'); if(preview){ preview.style.backgroundImage=`url(${url})`; preview.setAttribute('data-img-url',url); } } } const trigger=document.getElementById('loadMoreTrigger'); if(currentLoadedCount<allFilteredMagnets.length){ trigger.style.display='flex'; trigger.innerText='向下滚动加载更多...'; }else{ trigger.style.display='none'; } }
-
-    // ===== 卡片预览弹窗 =====
-    function showCardPreview(magnetLink, title) {
-        const handler = (event) => {
-            if (event.data && event.data.type === 'MAGNET_PREVIEW_RESULT') {
-                window.removeEventListener('message', handler);
-                if (event.data.success) {
-                    const data = event.data.data;
-                    showPreviewPopup(magnetLink, title, data);
-                } else {
-                    showToast('❌ 预览失败: ' + (event.data.error || '未知错误'), true);
-                }
-            }
-        };
-        window.addEventListener('message', handler);
-        window.postMessage({ type: 'REQUEST_MAGNET_PREVIEW', magnet: magnetLink }, '*');
-        setTimeout(() => { window.removeEventListener('message', handler); }, 30000);
+function batchCopyLinksWithModal() {
+if (selectedCardIds.size === 0) { alert('请先选择卡片'); return; }
+const links = [];
+for (const id of selectedCardIds) {
+const m = magnets.find(m => m.id === id);
+if (m && m.magnetLink) links.push(m.magnetLink);
+}
+if (links.length === 0) { alert('没有可复制的链接'); return; }
+disableCardMagnetLinks();
+const container = document.getElementById('batchLinksContainer');
+container.innerHTML = '';
+links.forEach(link => {
+const a = document.createElement('a');
+a.href = link;
+a.className = 'batch-link-item';
+a.textContent = link;
+a.title = '点击调用 PikPak 扩展或系统处理程序';
+container.appendChild(a);
+});
+document.getElementById('batchCopyModal').style.display = 'flex';
+}
+function bindModalRestore() {
+        // 模态框恢复逻辑已在 batchCopyLinksWithModal 中内联实现
+        // 保留为空函数以避免调用错误
     }
-
-    // ===== 预览弹窗（核心：保存/更新逻辑） =====
+async function storeImageBlob(url, blob) {
+        const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2,8);
+        await idbKeyval.set('images:' + id, blob);
+        return id;
+    }
+    async function getImageBlob(imageId) {
+        return await idbKeyval.get('images:' + imageId);
+    }
+    async function getImageUrlForCard(magnet) {
+        if (!magnet.imageUrl) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3ENo Preview%3C/text%3E%3C/svg%3E';
+        if (magnet.imageUrl.startsWith('img_')) {
+            const blob = await getImageBlob(magnet.imageUrl);
+            if (blob) return URL.createObjectURL(blob);
+            else return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3EMissing%3C/text%3E%3C/svg%3E';
+        }
+        return magnet.imageUrl;
+    }
     function showPreviewPopup(magnetLink, title, data) {
         const name = data.name || title || '未知资源';
         const count = data.count || 0;
@@ -1476,6 +1162,167 @@ let tokenClient = null;
     function migrateOldRulesFromLocalStorage() { const oldKeys = ['magnet_manager_auto_tag_rules_v14','magnet_manager_auto_tag_rules_v13','magnet_manager_auto_tag_rules_v12','magnet_manager_auto_tag_rules_v11','magnet_manager_auto_tag_rules_v10','magnet_manager_auto_tag_rules_v9','magnet_manager_auto_tag_rules_v8','magnet_manager_auto_tag_rules_v7','magnet_manager_auto_tag_rules_v6','magnet_manager_auto_tag_rules_v5','magnet_manager_auto_tag_rules_v4','magnet_manager_auto_tag_rules_v3','magnet_manager_auto_tag_rules_v2','magnet_manager_auto_tag_rules_v1','magnet_manager_auto_tag_rules']; for (const key of oldKeys) { const old = localStorage.getItem(key); if (old) { try { const parsed = JSON.parse(old); if (Array.isArray(parsed) && parsed.length > 0) { autoTagRules = parsed; saveToDB().catch(console.error); showToast(`已自动迁移 ${autoTagRules.length} 条自动标签规则`); return; } } catch(e) {} } } }
     function initTheme() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark') { document.body.classList.add('dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } else { document.body.classList.remove('dark'); document.getElementById('themeToggleBtn').textContent = '🌙'; } }
     function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
+// ===== Google Drive 同步 =====
+    let gdriveToken = null;
+    let gdriveFileId = null;
+    const GDRIVE_BACKUP_FILENAME = 'magnet_manager_backup.json';
+    let gdriveClient = null;
+
+    function initGDriveClient() {
+        if (typeof google === 'undefined' || !google.accounts) {
+            console.warn('Google Identity Services 未加载');
+            return;
+        }
+        gdriveClient = google.accounts.oauth2.initTokenClient({
+            client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            callback: (resp) => {
+                if (resp.access_token) {
+                    gdriveToken = resp.access_token;
+                    document.getElementById('gdriveLoginBtn').textContent = '🔑 已登录';
+                    document.getElementById('gdriveLoginBtn').style.background = '#34a853';
+                    document.getElementById('gdriveBackupBtn').style.display = 'inline-block';
+                    document.getElementById('gdriveRestoreBtn').style.display = 'inline-block';
+                    document.getElementById('gdriveStatus').textContent = '已登录';
+                    findDriveBackupFile().then(id => { if (id) gdriveFileId = id; });
+                } else {
+                    gdriveToken = null;
+                    document.getElementById('gdriveLoginBtn').textContent = '🔑 登录 Google Drive';
+                    document.getElementById('gdriveLoginBtn').style.background = '#4285f4';
+                    document.getElementById('gdriveBackupBtn').style.display = 'none';
+                    document.getElementById('gdriveRestoreBtn').style.display = 'none';
+                    document.getElementById('gdriveStatus').textContent = '未登录';
+                }
+            }
+        });
+    }
+
+    function loginGDrive() {
+        if (!gdriveClient) {
+            alert('Google 登录库未初始化，请检查 client_id 设置');
+            return;
+        }
+        if (gdriveToken) {
+            gdriveToken = null;
+            gdriveFileId = null;
+            document.getElementById('gdriveLoginBtn').textContent = '🔑 登录 Google Drive';
+            document.getElementById('gdriveLoginBtn').style.background = '#4285f4';
+            document.getElementById('gdriveBackupBtn').style.display = 'none';
+            document.getElementById('gdriveRestoreBtn').style.display = 'none';
+            document.getElementById('gdriveStatus').textContent = '已登出';
+            return;
+        }
+        gdriveClient.requestAccessToken({ prompt: 'consent' });
+    }
+
+    async function findDriveBackupFile() {
+        if (!gdriveToken) return null;
+        const url = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(GDRIVE_BACKUP_FILENAME)}'&fields=files(id,name)&spaces=drive`;
+        const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + gdriveToken } });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (data.files && data.files.length > 0) {
+            return data.files[0].id;
+        }
+        return null;
+    }
+
+    async function backupToGDrive() {
+        if (!gdriveToken) {
+            alert('请先登录 Google Drive');
+            return;
+        }
+        const exportObj = {
+            version: "3.0",
+            tags: tags,
+            magnets: magnets,
+            autoTagRules: autoTagRules,
+            tagOrder: tagOrder,
+            filterWords: filterWords,
+            failList: failList
+        };
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const metadata = {
+            name: GDRIVE_BACKUP_FILENAME,
+            mimeType: 'application/json'
+        };
+        let fileId = gdriveFileId;
+        let method = 'POST';
+        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+        if (fileId) {
+            method = 'PATCH';
+            url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
+        }
+        const formData = new FormData();
+        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        formData.append('file', blob);
+        const resp = await fetch(url, {
+            method: method,
+            headers: { 'Authorization': 'Bearer ' + gdriveToken },
+            body: formData
+        });
+        if (!resp.ok) {
+            const err = await resp.text();
+            throw new Error(`上传失败: ${resp.status} ${err}`);
+        }
+        const result = await resp.json();
+        gdriveFileId = result.id;
+        document.getElementById('gdriveStatus').textContent = `✅ 备份成功 (${new Date().toLocaleString()})`;
+        showToast('云端备份成功');
+    }
+
+    async function restoreFromGDrive() {
+        if (!gdriveToken) {
+            alert('请先登录 Google Drive');
+            return;
+        }
+        if (!gdriveFileId) {
+            const id = await findDriveBackupFile();
+            if (id) gdriveFileId = id;
+            else {
+                alert('云端未找到备份文件');
+                return;
+            }
+        }
+        const url = `https://www.googleapis.com/drive/v3/files/${gdriveFileId}?alt=media`;
+        const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + gdriveToken } });
+        if (!resp.ok) {
+            const err = await resp.text();
+            throw new Error(`下载失败: ${resp.status} ${err}`);
+        }
+        const json = await resp.json();
+        if (json.tags && json.magnets) {
+            if (!confirm('恢复将覆盖当前所有数据，确定继续？')) return;
+            tags = json.tags;
+            magnets = json.magnets;
+            if (json.autoTagRules) autoTagRules = json.autoTagRules;
+            if (json.filterWords) filterWords = json.filterWords;
+            if (json.tagOrder) tagOrder = json.tagOrder;
+            else tagOrder = tags.map(t => t.id);
+            if (json.failList) failList = json.failList;
+            else failList = [];
+            sortTagsByOrder();
+            nextTagId = tags.length ? Math.max(...tags.map(t=>t.id),0)+1 : 4;
+            nextMagnetId = magnets.length ? Math.max(...magnets.map(m=>m.id),0)+1 : 1;
+            await saveToDB();
+            await saveFilterWordsToDB();
+            await saveFailListToDB();
+            updateFilteredList();
+            currentLoadedCount = 0;
+            renderLoadedCards();
+            updateStats(allFilteredMagnets.length, magnets.length);
+            renderDraggable();
+            renderTagManagementList();
+            renderRulesList();
+            refreshRuleTagSelect();
+            renderFilterWordsList();
+            document.getElementById('gdriveStatus').textContent = `✅ 恢复成功 (${new Date().toLocaleString()})`;
+            showToast('云端恢复成功');
+        } else {
+            alert('备份文件格式无效');
+        }
+    }
 
     // ===== 扩展队列导入 =====
     let autoImportTimer = null;
@@ -1740,6 +1587,176 @@ let tokenClient = null;
         showToast(`全部重试完成: ${successCount} 张成功, ${failCount} 张失败`);
         if (document.getElementById('failListModal').style.display === 'flex') showFailListModal();
     }
+function updateFilteredList() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        let filtered = magnets.filter(m => {
+            if (search) {
+                const titleMatch = m.title.toLowerCase().includes(search);
+                const tagMatch = m.tagIds.some(tid => tags.find(t=>t.id===tid)?.name.toLowerCase().includes(search));
+                if (!titleMatch && !tagMatch) return false;
+            }
+            if (currentRatingFilter>0 && m.rating!==currentRatingFilter) return false;
+            return true;
+        });
+        filtered.sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+        allFilteredMagnets = filtered;
+    }
+async function renderLoadedCards() {
+        const container = document.getElementById('magnetGridContainer');
+        const loaded = allFilteredMagnets.slice(0, currentLoadedCount);
+        if (loaded.length === 0 && allFilteredMagnets.length > 0) {
+            currentLoadedCount = Math.min(pageSize, allFilteredMagnets.length);
+            return renderLoadedCards();
+        }
+        if (loaded.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:2rem">暂无磁力</div>';
+            document.getElementById('loadMoreTrigger').style.display = 'none';
+            return;
+        }
+
+        container.innerHTML = loaded.map(m => {
+            let tagSpans = m.tagIds.map(tid => tags.find(t=>t.id===tid)).filter(t=>t).map(t => `<span class="tag">${escapeHtml(t.name)}</span>`).join('');
+            let stars = '';
+            for (let i=1;i<=5;i++) stars += `<i class="${i<=m.rating?'fas fa-star active':'far fa-star'}" data-rating="${i}"></i>`;
+            const checked = selectedCardIds.has(m.id) ? 'checked' : '';
+            const shortLink = m.magnetLink.length>45 ? m.magnetLink.substring(0,45)+'...' : m.magnetLink;
+            const isLocal = m.imageUrl && m.imageUrl.startsWith('img_');
+            const badge = isLocal ? '<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>' : (m.imageUrl ? '<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>' : '');
+            const imgUrl = m.imageUrl ? (m.imageUrl.startsWith('img_') ? '' : m.imageUrl) : '';
+            return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img"><img src="${escapeHtml(imgUrl || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'200\' viewBox=\'0 0 400 200\'%3E%3Crect width=\'400\' height=\'200\' fill=\'%23e2e8f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' font-family=\'Arial\' font-size=\'16\' fill=\'%23475569\' text-anchor=\'middle\' dy=\'.3em\'%3ENo Preview%3C/text%3E%3C/svg%3E')}" alt="preview" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'200\' viewBox=\'0 0 400 200\'%3E%3Crect width=\'400\' height=\'200\' fill=\'%23e2e8f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' font-family=\'Arial\' font-size=\'16\' fill=\'%23475569\' text-anchor=\'middle\' dy=\'.3em\'%3ENo Image%3C/text%3E%3C/svg%3E';"></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn preview-card-btn" data-magnet="${escapeHtml(m.magnetLink)}" data-title="${escapeHtml(m.title)}" title="预览磁力"><i class="fas fa-eye"></i> 预览</button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`;
+        }).join('');
+
+        // 处理本地图片
+        for (const card of container.querySelectorAll('.magnet-card')) {
+            const mid = parseInt(card.dataset.id);
+            const m = magnets.find(m=>m.id===mid);
+            if (m && m.imageUrl && m.imageUrl.startsWith('img_')) {
+                const url = await getImageUrlForCard(m);
+                const img = card.querySelector('.preview-img img');
+                if (img) { img.src = url; }
+            }
+        }
+
+        if (selectionMode) {
+            document.querySelectorAll('.card-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(cb.dataset.id);
+                    if (cb.checked) selectedCardIds.add(id);
+                    else selectedCardIds.delete(id);
+                    updateSelectedCount();
+                });
+            });
+        }
+
+        document.querySelectorAll('.star-rating').forEach(div => {
+            const mid = parseInt(div.dataset.id);
+            const m = magnets.find(m=>m.id===mid);
+            if (!m) return;
+            div.querySelectorAll('i').forEach((star, idx) => {
+                star.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    let newRating = idx+1;
+                    if (m.rating === newRating) newRating=0;
+                    if (m.rating !== newRating) {
+                        m.rating = newRating;
+                        saveToDB().then(() => {
+                            updateFilteredList();
+                            currentLoadedCount=0;
+                            renderLoadedCards();
+                            updateStats(allFilteredMagnets.length, magnets.length);
+                        });
+                    }
+                });
+            });
+        });
+
+        document.querySelectorAll('.copy-magnet').forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            copyMagnetLink(btn.getAttribute('data-magnet'));
+        }));
+        document.querySelectorAll('.preview-img img').forEach(img => {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const url = img.src;
+                if (url && !url.includes('data:image')) showImagePreview(url);
+            });
+        });
+        document.querySelectorAll('.save-image-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.getAttribute('data-id'));
+                await saveImageToLocal(id, false);
+                updateFilteredList();
+                currentLoadedCount=0;
+                await renderLoadedCards();
+                updateStats(allFilteredMagnets.length, magnets.length);
+            });
+        });
+        document.querySelectorAll('.send-pikpak-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const magnet = btn.getAttribute('data-magnet');
+                try {
+                    await sendToPikPakViaBridge(magnet);
+                    showToast('✅ 已发送到 PikPak，任务创建成功！');
+                } catch (err) { showToast('❌ '+err.message, true); }
+            });
+        });
+        document.querySelectorAll('.preview-card-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const magnet = btn.getAttribute('data-magnet');
+                const title = btn.getAttribute('data-title') || '未知资源';
+                showCardPreview(magnet, title);
+            });
+        });
+        bindMagnetLinkEvents();
+
+        const trigger = document.getElementById('loadMoreTrigger');
+        if (currentLoadedCount < allFilteredMagnets.length) {
+            trigger.style.display = 'flex';
+            trigger.innerText = '向下滚动加载更多...';
+        } else {
+            trigger.style.display = 'none';
+        }
+    }
+// ===== 评分筛选 =====
+    function updateRatingFilterUI() {
+        const stars = document.querySelectorAll('#ratingFilter i');
+        stars.forEach(star => {
+            const r = parseInt(star.dataset.rating);
+            if (currentRatingFilter > 0 && r <= currentRatingFilter) {
+                star.className = 'fas fa-star active';
+            } else {
+                star.className = 'far fa-star';
+            }
+        });
+    }
+
+    function setupRatingFilter() {
+        const stars = document.querySelectorAll('#ratingFilter i');
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const r = parseInt(this.dataset.rating);
+                currentRatingFilter = (currentRatingFilter === r) ? 0 : r;
+                updateRatingFilterUI();
+                updateFilteredList();
+                currentLoadedCount = 0;
+                renderLoadedCards();
+                updateStats(allFilteredMagnets.length, magnets.length);
+            });
+        });
+        document.getElementById('clearRatingFilter').addEventListener('click', function() {
+            currentRatingFilter = 0;
+            updateRatingFilterUI();
+            updateFilteredList();
+            currentLoadedCount = 0;
+            renderLoadedCards();
+            updateStats(allFilteredMagnets.length, magnets.length);
+        });
+    }
+
     async function deleteAllFailCards() {
         if (failList.length === 0) { showToast('没有失败卡片可删除'); return; }
         if (confirm(`确定要永久删除 ${failList.length} 张失败的卡片吗？`)) {
@@ -1758,6 +1775,7 @@ let tokenClient = null;
             if (modal.style.display === 'flex') { modal.style.display = 'none'; showFailListModal(); }
         }
     }
+
     function copyFailMagnetLinks() {
         if (failList.length === 0) { showToast('没有失败项可复制'); return; }
         const magnetLinks = [];
@@ -1768,6 +1786,7 @@ let tokenClient = null;
         if (magnetLinks.length === 0) { showToast('未找到任何有效的磁力链接', true); return; }
         navigator.clipboard.writeText(magnetLinks.join('\n')).then(() => showToast(`已复制 ${magnetLinks.length} 个磁力链接`)).catch(() => showToast('复制失败', true));
     }
+
     async function batchSaveSelectedImages() {
         if (selectedCardIds.size === 0) { showToast('请先选择卡片', true); return; }
         const toProcess = [];
@@ -1808,7 +1827,6 @@ let tokenClient = null;
         document.getElementById('menuViewFailList').onclick = () => showFailListModal();
         document.getElementById('menuViewFailedPreviews').onclick = showFailedPreviewModal;
         document.getElementById('menuFullBackupWithImages').onclick = fullBackupWithImages;
-        document.getElementById('menuFullRestoreWithImages').onclick = fullRestoreWithImages;
         document.getElementById('menuRestoreImagesFromFolder').onclick = restoreImagesFromFolder;
         document.getElementById('menuExportData').onclick = exportSingleFile;
         document.getElementById('menuImportData').onclick = importSingleFile;
@@ -1838,7 +1856,12 @@ let tokenClient = null;
         document.getElementById('searchInput').addEventListener('input', () => { selectedCardIds.clear(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); if (selectionMode) updateSelectedCount(); });
         document.getElementById('copyAllBatchLinksBtn').onclick = () => { const links = Array.from(document.querySelectorAll('#batchLinksContainer .batch-link-item')).map(a => a.textContent); if (links.length === 0) return; navigator.clipboard.writeText(links.join('\n')).then(() => showToast(`已复制 ${links.length} 个链接到剪贴板`, false)).catch(() => alert('复制失败')); };
         bindModalRestore();
-        initHideImageButton();
+// 直接实现隐藏图片功能，无需单独函数
+        document.getElementById('hideImageBtn').addEventListener('click', function() {
+            document.body.classList.toggle('hide-images');
+            const hidden = document.body.classList.contains('hide-images');
+            this.innerHTML = hidden ? '<i class="fas fa-eye"></i> 显示图片' : '<i class="fas fa-image"></i> 隐藏图片';
+        });
         document.getElementById('closeFilterWordsModalBtn').onclick = () => document.getElementById('filterWordsModal').style.display = 'none';
         document.getElementById('addFilterWordBtn').onclick = addFilterWord;
         document.getElementById('newFilterWord').addEventListener('keypress', (e) => { if (e.key === 'Enter') addFilterWord(); });
@@ -1871,6 +1894,9 @@ let tokenClient = null;
         });
         document.getElementById('importFromExtensionBtn').onclick = importFromExtension;
         document.getElementById('autoImportToggleBtn').onclick = toggleAutoImport;
+document.getElementById('gdriveLoginBtn').onclick = loginGDrive;
+    document.getElementById('gdriveBackupBtn').onclick = backupToGDrive;
+    document.getElementById('gdriveRestoreBtn').onclick = restoreFromGDrive;
 
         // 批量添加模态框（已单独绑定关闭事件）
         document.getElementById('parseBatchBtn').onclick = parseBatchMagnets;
@@ -2081,6 +2107,7 @@ let tokenClient = null;
             if (savedInterval) { const intervalInput = document.getElementById('autoImportInterval'); if (intervalInput) intervalInput.value = savedInterval; }
             const autoRunning = localStorage.getItem('autoImportRunning') === 'true';
             if (autoRunning) { setTimeout(() => { startAutoImport(); }, 500); }
+initGDriveClient();
             console.log('初始化完成，所有按钮功能正常。');
         } catch(err){
             console.error(err);
