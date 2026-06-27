@@ -20,7 +20,6 @@
             --card-bg: white;
             --card-border: #e2e8f0;
             --tag-bg: #e6f0f2;
-            --tag-hover: #cbd5e1;
 <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
             --filter-bar-bg: white;
             --btn-bg: white;
@@ -854,11 +853,6 @@ function bindModalRestore() {
         // 模态框恢复逻辑已在 batchCopyLinksWithModal 中内联实现
         // 保留为空函数以避免调用错误
     }
-async function storeImageBlob(url, blob) {
-        const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2,8);
-        await idbKeyval.set('images:' + id, blob);
-        return id;
-    }
     async function getImageBlob(imageId) {
         return await idbKeyval.get('images:' + imageId);
     }
@@ -1039,6 +1033,23 @@ async function storeImageBlob(url, blob) {
     }
 
     // ===== 截图提取 =====
+// ===== 卡片预览入口 =====
+    function showCardPreview(magnetLink, title) {
+        const handler = (event) => {
+            if (event.data && event.data.type === 'MAGNET_PREVIEW_RESULT') {
+                window.removeEventListener('message', handler);
+                if (event.data.success) {
+                    const data = event.data.data;
+                    showPreviewPopup(magnetLink, title, data);
+                } else {
+                    showToast('❌ 预览失败: ' + (event.data.error || '未知错误'), true);
+                }
+            }
+        };
+        window.addEventListener('message', handler);
+        window.postMessage({ type: 'REQUEST_MAGNET_PREVIEW', magnet: magnetLink }, '*');
+        setTimeout(() => { window.removeEventListener('message', handler); }, 30000);
+    }
     function toWhatslinkImageUrl(value) {
         let url = String(value || '').trim();
         if (!url) return '';
@@ -1631,20 +1642,8 @@ async function renderLoadedCards() {
             const shortLink = m.magnetLink.length>45 ? m.magnetLink.substring(0,45)+'...' : m.magnetLink;
             const isLocal = m.imageUrl && m.imageUrl.startsWith('img_');
             const badge = isLocal ? '<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>' : (m.imageUrl ? '<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>' : '');
-            const imgUrl = m.imageUrl ? (m.imageUrl.startsWith('img_') ? '' : m.imageUrl) : '';
-            return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img"><img src="${escapeHtml(imgUrl || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'200\' viewBox=\'0 0 400 200\'%3E%3Crect width=\'400\' height=\'200\' fill=\'%23e2e8f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' font-family=\'Arial\' font-size=\'16\' fill=\'%23475569\' text-anchor=\'middle\' dy=\'.3em\'%3ENo Preview%3C/text%3E%3C/svg%3E')}" alt="preview" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'200\' viewBox=\'0 0 400 200\'%3E%3Crect width=\'400\' height=\'200\' fill=\'%23e2e8f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' font-family=\'Arial\' font-size=\'16\' fill=\'%23475569\' text-anchor=\'middle\' dy=\'.3em\'%3ENo Image%3C/text%3E%3C/svg%3E';"></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn preview-card-btn" data-magnet="${escapeHtml(m.magnetLink)}" data-title="${escapeHtml(m.title)}" title="预览磁力"><i class="fas fa-eye"></i> 预览</button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`;
+            return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\" viewBox=\"0 0 400 200\"%3E%3Crect width=\"400\" height=\"200\" fill=\"%23e2e8f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" font-family=\"Arial\" font-size=\"16\" fill=\"%23475569\" text-anchor=\"middle\" dy=\".3em\"%3ELoading...%3C/text%3E%3C/svg%3E')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn preview-card-btn" data-magnet="${escapeHtml(m.magnetLink)}" data-title="${escapeHtml(m.title)}" title="预览磁力"><i class="fas fa-eye"></i> 预览</button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`;
         }).join('');
-
-        // 处理本地图片
-        for (const card of container.querySelectorAll('.magnet-card')) {
-            const mid = parseInt(card.dataset.id);
-            const m = magnets.find(m=>m.id===mid);
-            if (m && m.imageUrl && m.imageUrl.startsWith('img_')) {
-                const url = await getImageUrlForCard(m);
-                const img = card.querySelector('.preview-img img');
-                if (img) { img.src = url; }
-            }
-        }
 
         if (selectionMode) {
             document.querySelectorAll('.card-checkbox').forEach(cb => {
@@ -1684,13 +1683,15 @@ async function renderLoadedCards() {
             e.stopPropagation();
             copyMagnetLink(btn.getAttribute('data-magnet'));
         }));
-        document.querySelectorAll('.preview-img img').forEach(img => {
-            img.addEventListener('click', (e) => {
+
+        document.querySelectorAll('.preview-img').forEach(div => {
+            div.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const url = img.src;
-                if (url && !url.includes('data:image')) showImagePreview(url);
+                const url = div.getAttribute('data-img-url');
+                if (url) showImagePreview(url);
             });
         });
+
         document.querySelectorAll('.save-image-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -1702,6 +1703,7 @@ async function renderLoadedCards() {
                 updateStats(allFilteredMagnets.length, magnets.length);
             });
         });
+
         document.querySelectorAll('.send-pikpak-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -1712,6 +1714,7 @@ async function renderLoadedCards() {
                 } catch (err) { showToast('❌ '+err.message, true); }
             });
         });
+
         document.querySelectorAll('.preview-card-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1720,7 +1723,30 @@ async function renderLoadedCards() {
                 showCardPreview(magnet, title);
             });
         });
+
         bindMagnetLinkEvents();
+
+        for (const card of container.querySelectorAll('.magnet-card')) {
+            const mid = parseInt(card.getAttribute('data-id'));
+            const m = magnets.find(m=>m.id===mid);
+            if (m) {
+                const url = await getImageUrlForCard(m);
+                const preview = card.querySelector('.preview-img');
+                if (preview) {
+                    preview.style.backgroundImage = `url(${url})`;
+                    preview.setAttribute('data-img-url', url);
+                }
+            }
+        }
+
+        const trigger = document.getElementById('loadMoreTrigger');
+        if (currentLoadedCount < allFilteredMagnets.length) {
+            trigger.style.display = 'flex';
+            trigger.innerText = '向下滚动加载更多...';
+        } else {
+            trigger.style.display = 'none';
+        }
+    }
 
         const trigger = document.getElementById('loadMoreTrigger');
         if (currentLoadedCount < allFilteredMagnets.length) {
