@@ -1168,13 +1168,24 @@ async function storeImageBlob(url, blob) {
     const GDRIVE_BACKUP_FILENAME = 'magnet_manager_backup.json';
     let gdriveClient = null;
 
-    function initGDriveClient() {
+function initGDriveClient() {
+        // 从 localStorage 读取 client_id，若未设置则提示用户输入
+        let clientId = localStorage.getItem('gdrive_client_id');
+        if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
+            clientId = prompt('请输入您的 Google OAuth 2.0 Client ID (需在 Google Cloud Console 创建):');
+            if (clientId && clientId.trim() !== '') {
+                localStorage.setItem('gdrive_client_id', clientId.trim());
+            } else {
+                alert('未设置 Client ID，将无法登录 Google Drive。请刷新后重新输入。');
+                return;
+            }
+        }
         if (typeof google === 'undefined' || !google.accounts) {
             console.warn('Google Identity Services 未加载');
             return;
         }
         gdriveClient = google.accounts.oauth2.initTokenClient({
-            client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+            client_id: clientId,
             scope: 'https://www.googleapis.com/auth/drive.file',
             callback: (resp) => {
                 if (resp.access_token) {
