@@ -289,8 +289,6 @@
         }
         .delete-word-btn:hover { background: #dc2626; }
         .add-word-input {
-<button class="btn-link" id="cloudSyncBtn">同步</button>
-                    <button class="btn-link" id="cloudRestoreBtn">恢复</button>
             display: flex;
             gap: 8px;
             margin-top: 8px;
@@ -658,6 +656,14 @@
         <div class="sidebar-header">
             <div class="sidebar-logo">⚡ 磁力管理器</div>
             <div style="display: flex; gap: 8px;"><button id="themeToggleBtn" class="theme-switch-btn" title="切换白天/夜晚模式">🌙</button><button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button></div>
+<span class="cloud-status" id="cloudStatus">
+                <span class="dot idle" id="cloudDot"></span>
+                <span id="cloudText">未连接</span>
+                <button class="btn-link" id="cloudLoginBtn">登录</button>
+                <button class="btn-link" id="cloudSyncBtn">同步</button>
+                <button class="btn-link" id="cloudRestoreBtn">恢复</button>
+                <button class="btn-link" id="cloudSettingsBtn">⚙️</button>
+            </span>
         </div>
         <div class="sidebar-menu">
             <div class="menu-item" id="menuAddMagnet"><i class="fas fa-plus-circle"></i><span>➕ 添加磁力</span></div>
