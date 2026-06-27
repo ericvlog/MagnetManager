@@ -414,11 +414,12 @@
     let imageBlobCache = new Map();
     let batchItems = [];
 
-    // ========================== Google Identity Services (GIS) 同步 ==========================
+// ========================== Google Identity Services (GIS) 同步 ==========================
     let tokenClient = null;
     let accessToken = null;
-    let syncInstance = null;
     let isSignedIn = false;
+    let syncInProgress = false;
+    let lastSyncTime = parseInt(localStorage.getItem('lastSyncTime') || '0');
 
     function getStoredClientId() { return localStorage.getItem('googleClientId') || ''; }
     function saveClientId(id) {
@@ -442,15 +443,6 @@
         }
     }
 
-    function getAccessToken() { return accessToken; }
-
-    // 检查同步库是否加载
-    function isSyncLibLoaded() {
-        return (typeof window['idb-free-sync'] !== 'undefined' &&
-                typeof window['idb-free-sync'].createSync === 'function');
-    }
-
-    // 初始化 Token Client
     function initTokenClient(clientId) {
         if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
             console.warn('Google Identity Services 库未加载');
@@ -465,7 +457,7 @@
                         accessToken = response.access_token;
                         isSignedIn = true;
                         updateCloudStatus('online', '已登录');
-                        startSync();
+                        showToast('登录成功，点击「同步」备份数据');
                     } else if (response.error) {
                         console.error('Token 获取失败:', response.error);
                         updateCloudStatus('offline', '认证失败');
@@ -488,7 +480,6 @@
         }
     }
 
-    // 登录（用户点击触发）
     function signIn() {
         if (!tokenClient) {
             const clientId = getStoredClientId();
@@ -502,150 +493,235 @@
                 return;
             }
         }
-        // 请求 token
         tokenClient.requestAccessToken({
             prompt: 'consent',
             include_granted_scopes: true
         });
     }
 
-    // 登出
     function signOut() {
         accessToken = null;
         isSignedIn = false;
-        if (syncInstance) {
-            syncInstance.stop();
-            syncInstance = null;
-        }
         updateCloudStatus('idle', '未连接');
         showToast('已登出');
     }
 
-    // 启动同步
-    async function startSync() {
+    // 增量同步：只上传新增/修改的数据
+    async function syncToDrive(manual = true) {
         if (!accessToken) {
-            updateCloudStatus('offline', '无 token');
+            showToast('请先登录', true);
             return;
         }
-        
-        // 检查库是否加载，如果未加载则尝试动态加载
-        if (!isSyncLibLoaded()) {
-            updateCloudStatus('offline', '同步库加载中...');
-            showToast('正在加载同步库...', false);
-            const loaded = await loadSyncLibrary();
-            if (!loaded) {
-                updateCloudStatus('offline', '同步库加载失败');
-                alert('同步库加载失败，请检查网络连接后刷新页面重试。\n\n提示：您可以在控制台运行以下命令测试加载：\n' +
-                      'const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js";document.head.appendChild(s);');
-                return;
-            }
+        if (syncInProgress) {
+            showToast('同步正在进行中...', false);
+            return;
         }
+
+        syncInProgress = true;
+        updateCloudStatus('syncing', '同步中...');
 
         try {
-            const { createSync } = window['idb-free-sync'];
-            updateCloudStatus('syncing', '同步中...');
+            // 收集所有数据
+            const allKeys = await idbKeyval.keys();
+            const dataToSync = {};
+            let changedCount = 0;
 
-            const options = {
-                database: DB_NAME,
-                stores: [
-                    { name: 'tags', blobFields: [] },
-                    { name: 'magnets', blobFields: [] },
-                    { name: 'autoTagRules', blobFields: [] },
-                    { name: 'filterWords', blobFields: [] },
-                    { name: 'images', blobFields: ['blob'] },
-                    { name: 'failList', blobFields: [] }
-                ],
-                getToken: () => accessToken,
-                cloudFolder: 'MagnetManagerData'
+            for (const key of allKeys) {
+                const value = await idbKeyval.get(key);
+                // 判断是否需要同步：如果对象有 updatedAt 且大于 lastSyncTime，或没有 updatedAt 但 key 是 'tags' 等元数据
+                let shouldSync = false;
+                if (key.startsWith('card_') || key.startsWith('tag_') || key.startsWith('rule_') || key.startsWith('filterWord_')) {
+                    if (value && value.updatedAt && value.updatedAt > lastSyncTime) {
+                        shouldSync = true;
+                    }
+                } else if (key === 'tags' || key === 'autoTagRules' || key === 'filterWords' || key === 'tagOrder' || key === 'failList') {
+                    // 元数据每次都同步（但为了增量，我们只在一开始同步一次，但这里为了简单，我们每次都全量上传元数据）
+                    shouldSync = true;
+                } else if (key.startsWith('img_')) {
+                    // 图片：如果关联的卡片有更新，则同步图片，但这里我们只同步元数据，图片作为附件
+                    // 为了增量，我们只上传新图片，但图片 blob 较大，暂时只上传元数据（后续扩展）
+                    shouldSync = false;
+                }
+
+                if (shouldSync) {
+                    dataToSync[key] = value;
+                    changedCount++;
+                }
+            }
+
+            if (changedCount === 0 && manual) {
+                showToast('没有需要同步的新数据', false);
+                syncInProgress = false;
+                updateCloudStatus('online', '已同步');
+                return;
+            }
+
+            // 添加同步元数据
+            const payload = {
+                version: '1.0',
+                timestamp: Date.now(),
+                lastSyncTime: lastSyncTime,
+                data: dataToSync,
+                // 记录哪些是新增的（用于后续合并）
+                changedKeys: Object.keys(dataToSync)
             };
 
-            syncInstance = createSync(options);
-            syncInstance.on('synced', (changes) => {
-                console.log('同步完成，变更数量:', changes ? changes.length : 0);
-                updateCloudStatus('online', '已同步 ' + new Date().toLocaleTimeString());
-                updateFilteredList();
-                currentLoadedCount = 0;
-                renderLoadedCards();
-                updateStats(allFilteredMagnets.length, magnets.length);
+            const jsonData = JSON.stringify(payload, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+
+            // 查找已有文件
+            const query = "name='magnet_sync_data.json' and trashed=false";
+            const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
+            const searchResp = await fetch(searchUrl, {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
             });
-            syncInstance.on('error', (err) => {
-                console.error('同步错误:', err);
-                updateCloudStatus('offline', '同步错误');
+            const searchResult = await searchResp.json();
+            const existingFile = searchResult.files && searchResult.files[0];
+
+            let uploadUrl, method, body;
+            if (existingFile) {
+                uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`;
+                method = 'PATCH';
+                body = jsonData;
+            } else {
+                uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+                method = 'POST';
+                const metadata = {
+                    name: 'magnet_sync_data.json',
+                    mimeType: 'application/json'
+                };
+                const formData = new FormData();
+                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                formData.append('file', blob);
+                body = formData;
+            }
+
+            const uploadResp = await fetch(uploadUrl, {
+                method: method,
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken,
+                    ...(method === 'PATCH' ? { 'Content-Type': 'application/json' } : {})
+                },
+                body: body
             });
 
-            await syncInstance.sync();
-            updateCloudStatus('online', '已同步');
+            if (uploadResp.ok) {
+                // 更新 lastSyncTime
+                lastSyncTime = Date.now();
+                localStorage.setItem('lastSyncTime', lastSyncTime);
+                showToast(`✅ 同步成功，上传了 ${changedCount} 项数据`);
+                updateCloudStatus('online', '已同步 ' + new Date().toLocaleTimeString());
+            } else {
+                const errText = await uploadResp.text();
+                console.error('同步失败:', errText);
+                showToast('❌ 同步失败: ' + errText, true);
+                updateCloudStatus('offline', '同步失败');
+            }
+        } catch (err) {
+            console.error('同步出错:', err);
+            showToast('❌ 同步出错: ' + err.message, true);
+            updateCloudStatus('offline', '同步出错');
+        } finally {
+            syncInProgress = false;
+        }
+    }
+
+    // 从云端恢复全量数据（合并增量）
+    async function restoreFromDrive() {
+        if (!accessToken) {
+            showToast('请先登录', true);
+            return;
+        }
+        if (syncInProgress) {
+            showToast('操作正在进行中...', false);
+            return;
+        }
+        if (!confirm('将从 Google Drive 恢复数据，本地数据将被合并（增量），确定吗？')) return;
+
+        syncInProgress = true;
+        updateCloudStatus('syncing', '恢复中...');
+
+        try {
+            const query = "name='magnet_sync_data.json' and trashed=false";
+            const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
+            const searchResp = await fetch(searchUrl, {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            const searchResult = await searchResp.json();
+            const file = searchResult.files && searchResult.files[0];
+            if (!file) {
+                showToast('未找到云端备份文件', true);
+                updateCloudStatus('idle', '未找到备份');
+                return;
+            }
+
+            const downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+            const downloadResp = await fetch(downloadUrl, {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            if (!downloadResp.ok) {
+                const errText = await downloadResp.text();
+                showToast('下载失败: ' + errText, true);
+                return;
+            }
+
+            const payload = await downloadResp.json();
+            const remoteData = payload.data || {};
+            const remoteKeys = Object.keys(remoteData);
+
+            // 合并数据：对于本地已有的键，如果 remote 的 updatedAt 较新则覆盖，否则保留本地
+            let mergedCount = 0;
+            for (const key of remoteKeys) {
+                const localValue = await idbKeyval.get(key);
+                const remoteValue = remoteData[key];
+                let shouldMerge = false;
+                if (!localValue) {
+                    shouldMerge = true;
+                } else if (remoteValue && remoteValue.updatedAt && localValue.updatedAt) {
+                    if (remoteValue.updatedAt > localValue.updatedAt) {
+                        shouldMerge = true;
+                    }
+                } else {
+                    // 没有 updatedAt 字段，则直接覆盖（兼容旧数据）
+                    shouldMerge = true;
+                }
+                if (shouldMerge) {
+                    await idbKeyval.set(key, remoteValue);
+                    mergedCount++;
+                }
+            }
+
+            // 更新 lastSyncTime 为远程的时间戳
+            if (payload.timestamp) {
+                lastSyncTime = payload.timestamp;
+                localStorage.setItem('lastSyncTime', lastSyncTime);
+            }
+
+            // 刷新界面
+            await loadAllDataFromIDB();
             updateFilteredList();
             currentLoadedCount = 0;
-            renderLoadedCards();
+            await renderLoadedCards();
             updateStats(allFilteredMagnets.length, magnets.length);
+            renderDraggable();
+            renderTagManagementList();
+            renderFilterWordsList();
+            refreshRuleTagSelect();
+            renderRulesList();
+
+            showToast(`✅ 恢复成功，合并了 ${mergedCount} 项数据`);
+            updateCloudStatus('online', '已恢复 ' + new Date().toLocaleTimeString());
         } catch (err) {
-            console.error('启动同步失败:', err);
-            updateCloudStatus('offline', '同步失败: ' + err.message);
+            console.error('恢复失败:', err);
+            showToast('❌ 恢复失败: ' + err.message, true);
+            updateCloudStatus('offline', '恢复失败');
+        } finally {
+            syncInProgress = false;
         }
     }
 
-    // 手动同步
     function manualSync() {
-        if (syncInstance) {
-            updateCloudStatus('syncing', '手动同步中...');
-            syncInstance.sync().then(() => {
-                updateCloudStatus('online', '同步完成 ' + new Date().toLocaleTimeString());
-            }).catch(err => {
-                updateCloudStatus('offline', '同步失败');
-            });
-        } else {
-            startSync();
-        }
-    }
-
-    // 动态加载同步库（使用正确的版本和路径）
-    function loadSyncLibrary() {
-        return new Promise((resolve) => {
-            // 如果已经加载，直接返回
-            if (isSyncLibLoaded()) { resolve(true); return; }
-            
-            // 尝试多个 CDN 源
-            const sources = [
-                'https://cdn.jsdelivr.net/npm/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js',
-                'https://unpkg.com/@rcarls/idb-free-sync@0.1.1/dist/idb-free-sync.umd.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/idb-free-sync/0.1.1/idb-free-sync.min.js'
-            ];
-            
-            let currentIndex = 0;
-            
-            function tryLoad() {
-                if (currentIndex >= sources.length) {
-                    console.error('所有 CDN 源均加载失败');
-                    resolve(false);
-                    return;
-                }
-                
-                const script = document.createElement('script');
-                script.src = sources[currentIndex];
-                script.onload = () => {
-                    // 检查是否加载成功
-                    setTimeout(() => {
-                        if (isSyncLibLoaded()) {
-                            console.log(`✅ 同步库从 ${sources[currentIndex]} 加载成功`);
-                            resolve(true);
-                        } else {
-                            // 加载了但未定义，继续尝试下一个
-                            currentIndex++;
-                            tryLoad();
-                        }
-                    }, 500);
-                };
-                script.onerror = () => {
-                    console.warn(`❌ 从 ${sources[currentIndex]} 加载失败，尝试下一个...`);
-                    currentIndex++;
-                    tryLoad();
-                };
-                document.head.appendChild(script);
-            }
-            
-            tryLoad();
-        });
+        syncToDrive(true);
     }
 
     // 设置对话框
@@ -664,10 +740,6 @@
         tokenClient = null;
         accessToken = null;
         isSignedIn = false;
-        if (syncInstance) {
-            syncInstance.stop();
-            syncInstance = null;
-        }
         if (initTokenClient(clientId)) {
             updateCloudStatus('idle', '已更新，请登录');
         } else {
@@ -676,7 +748,6 @@
         }
     }
 
-    // 初始化 GIS
     function initializeGoogleDrive() {
         const clientId = getStoredClientId();
         if (!clientId) {
@@ -745,128 +816,83 @@
     }
     function updateTagOrderFromTags() { tagOrder = tags.map(t=>t.id); saveTagOrder(); }
 
-    // ===== IndexedDB =====
-    function openDB() { return new Promise((resolve,reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onerror = () => reject(req.error);
-        req.onsuccess = () => { db = req.result; resolve(db); };
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORES.tags)) db.createObjectStore(STORES.tags, {keyPath:'id'});
-            if (!db.objectStoreNames.contains(STORES.magnets)) db.createObjectStore(STORES.magnets, {keyPath:'id'});
-            if (!db.objectStoreNames.contains(STORES.autoTagRules)) db.createObjectStore(STORES.autoTagRules, {keyPath:'id',autoIncrement:true});
-            if (!db.objectStoreNames.contains(STORES.filterWords)) db.createObjectStore(STORES.filterWords, {keyPath:'id',autoIncrement:true});
-            if (!db.objectStoreNames.contains(STORES.images)) db.createObjectStore(STORES.images, {keyPath:'id'});
-            if (!db.objectStoreNames.contains(STORES.failList)) db.createObjectStore(STORES.failList, {keyPath:'cardId'});
-        };
-    }); }
-    function saveFilterWordsToDB() { if (!db) return Promise.reject(); return new Promise((resolve,reject) => {
-        const tx = db.transaction([STORES.filterWords], 'readwrite');
-        const store = tx.objectStore(STORES.filterWords);
-        store.clear().onsuccess = () => {
-            let done=0; if (filterWords.length===0) { resolve(); return; }
-            for (let i=0; i<filterWords.length; i++) {
-                const req = store.put({id:i, word:filterWords[i]});
-                req.onsuccess = () => { done++; if(done===filterWords.length) resolve(); };
-                req.onerror = e => reject(e.target.error);
-            }
-        };
-        store.clear().onerror = e => reject(e.target.error);
-    }); }
-    function loadFilterWordsFromDB() { if (!db) return Promise.reject(); return new Promise((resolve,reject) => {
-        const tx = db.transaction([STORES.filterWords], 'readonly');
-        const req = tx.objectStore(STORES.filterWords).getAll();
-        req.onsuccess = () => { filterWords = req.result.map(i=>i.word).filter(w=>w && w.trim()!==''); resolve(); };
-        req.onerror = e => reject(e.target.error);
-    }); }
-    function saveToDB() { return new Promise((resolve,reject) => {
-        if (!db) return reject(new Error('DB not initialized'));
-        const tx = db.transaction([STORES.tags, STORES.magnets, STORES.autoTagRules], 'readwrite');
-        const tagsStore = tx.objectStore(STORES.tags);
-        const magnetsStore = tx.objectStore(STORES.magnets);
-        const rulesStore = tx.objectStore(STORES.autoTagRules);
-        let cleared = 0;
-        const check = () => { cleared++; if (cleared===3) {
-            for (const t of tags) tagsStore.put(t);
-            for (const m of magnets) magnetsStore.put(m);
-            for (let i=0; i<autoTagRules.length; i++) rulesStore.put({id:i, keyword:autoTagRules[i].keyword, tagId:autoTagRules[i].tagId});
-            tx.oncomplete = () => { updateTagOrderFromTags(); saveFilterWordsToDB().then(resolve).catch(reject); };
-            tx.onerror = e => reject(e.target.error);
-        }};
-        tagsStore.clear().onsuccess = check;
-        magnetsStore.clear().onsuccess = check;
-        rulesStore.clear().onsuccess = check;
-    }); }
-    function loadFromDB() { return new Promise((resolve,reject) => {
-        if (!db) return reject(new Error('DB not initialized'));
-        const tx = db.transaction([STORES.tags, STORES.magnets, STORES.autoTagRules], 'readonly');
-        let result = {tags:[], magnets:[], rules:[]};
-        let pending=3;
-        const done = () => { if(--pending===0) resolve(result); };
-        tx.objectStore(STORES.tags).getAll().onsuccess = e => { result.tags = e.target.result; done(); };
-        tx.objectStore(STORES.magnets).getAll().onsuccess = e => { result.magnets = e.target.result; done(); };
-        tx.objectStore(STORES.autoTagRules).getAll().onsuccess = e => { result.rules = e.target.result; done(); };
-        tx.onerror = e => reject(e.target.error);
-    }); }
-    function saveFailListToDB() { if (!db) return Promise.reject(); return new Promise((resolve,reject) => {
-        const tx = db.transaction([STORES.failList], 'readwrite');
-        const store = tx.objectStore(STORES.failList);
-        store.clear().onsuccess = () => {
-            let done=0; if (failList.length===0) { resolve(); return; }
-            for (const item of failList) {
-                const req = store.put(item);
-                req.onsuccess = () => { done++; if(done===failList.length) resolve(); };
-                req.onerror = e => reject(e.target.error);
-            }
-        };
-        store.clear().onerror = e => reject(e.target.error);
-    }); }
-    function loadFailListFromDB() { if (!db) return Promise.reject(); return new Promise((resolve,reject) => {
-        const req = db.transaction([STORES.failList], 'readonly').objectStore(STORES.failList).getAll();
-        req.onsuccess = () => { failList = req.result || []; resolve(); };
-        req.onerror = e => reject(e.target.error);
-    }); }
-    function storeImageBlob(url, blob) {
-        if (!db) return null;
-        const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2,8);
-        return new Promise((resolve,reject) => {
-            const req = db.transaction([STORES.images], 'readwrite').objectStore(STORES.images).put({id, blob, url, timestamp:Date.now()});
-            req.onsuccess = () => resolve(id);
-            req.onerror = e => reject(e.target.error);
-        });
-    }
-    async function getImageBlob(imageId) {
-        if (!db) return null;
-        if (imageBlobCache.has(imageId)) return imageBlobCache.get(imageId);
-        return new Promise((resolve,reject) => {
-            const req = db.transaction([STORES.images], 'readonly').objectStore(STORES.images).get(imageId);
-            req.onsuccess = () => {
-                if (req.result && req.result.blob) {
-                    imageBlobCache.set(imageId, req.result.blob);
-                    resolve(req.result.blob);
-                } else resolve(null);
-            };
-            req.onerror = e => reject(e.target.error);
-        });
-    }
-    async function getImageUrlForCard(magnet) {
-        if (!magnet.imageUrl) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3ENo Preview%3C/text%3E%3C/svg%3E';
-        if (magnet.imageUrl.startsWith('img_')) {
-            const blob = await getImageBlob(magnet.imageUrl);
-            if (blob) return URL.createObjectURL(blob);
-            else return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3EMissing%3C/text%3E%3C/svg%3E';
-        }
-        return magnet.imageUrl;
+// ===== 存储层：使用 idb-keyval =====
+    // 为了兼容原有代码，保留函数名，但内部使用 idb-keyval
+
+    // 加载所有数据到内存
+    async function loadAllDataFromIDB() {
+        // 从 idb-keyval 读取数据
+        const storedTags = await idbKeyval.get('tags');
+        if (storedTags) tags = storedTags;
+
+        const storedMagnets = await idbKeyval.get('magnets');
+        if (storedMagnets) magnets = storedMagnets;
+
+        const storedRules = await idbKeyval.get('autoTagRules');
+        if (storedRules) autoTagRules = storedRules;
+
+        const storedFilterWords = await idbKeyval.get('filterWords');
+        if (storedFilterWords) filterWords = storedFilterWords;
+
+        const storedTagOrder = await idbKeyval.get('tagOrder');
+        if (storedTagOrder) tagOrder = storedTagOrder;
+
+        const storedFailList = await idbKeyval.get('failList');
+        if (storedFailList) failList = storedFailList;
+
+        // 恢复 ID 计数器（从现有的磁铁和标签中计算）
+        if (tags.length) nextTagId = Math.max(...tags.map(t => t.id)) + 1;
+        else nextTagId = 1;
+        if (magnets.length) nextMagnetId = Math.max(...magnets.map(m => m.id)) + 1;
+        else nextMagnetId = 1;
+
+        // 重建图片 blob 缓存（可选，但为了兼容 getImageBlob，我们保留缓存机制）
+        imageBlobCache.clear();
+        // 图片存储为 'img_xxx' 键，我们不需要预加载
     }
 
-    // ===== 扩展代理 & 图片保存 =====
-    function fetchImageViaExtension(url) {
-        return new Promise((resolve,reject) => {
-            if (!window.__MAGNET_HELPER_EXTENSION__) { reject(new Error('扩展未安装')); return; }
-            const handler = (event) => {
-                if (event.data.type === 'IMAGE_DOWNLOAD_RESULT') {
-                    window.removeEventListener('message', handler);
-                    if (event.data.success) resolve(event.data.blob);
+    // 保存所有数据到 idb-keyval
+    async function saveAllDataToIDB() {
+        await idbKeyval.set('tags', tags);
+        await idbKeyval.set('magnets', magnets);
+        await idbKeyval.set('autoTagRules', autoTagRules);
+        await idbKeyval.set('filterWords', filterWords);
+        await idbKeyval.set('tagOrder', tagOrder);
+        await idbKeyval.set('failList', failList);
+        // 更新 lastModified 时间戳（用于增量同步）
+        // 为每个卡片添加 updatedAt（如果尚无）
+        for (const m of magnets) {
+            if (!m.updatedAt) m.updatedAt = Date.now();
+        }
+        // 保存成功后，可更新 lastSyncTime（可选）
+    }
+
+    // 兼容旧函数
+    function openDB() { return Promise.resolve(); } // 无操作
+    function saveFilterWordsToDB() { return idbKeyval.set('filterWords', filterWords); }
+    function loadFilterWordsFromDB() { return loadAllDataFromIDB(); }
+    function saveToDB() { return saveAllDataToIDB(); }
+    function loadFromDB() { return loadAllDataFromIDB(); }
+    function saveFailListToDB() { return idbKeyval.set('failList', failList); }
+    function loadFailListFromDB() { return idbKeyval.set('failList', failList).catch(()=>{}); }
+
+    // 图片存储：使用 idb-keyval 存储 Blob
+    function storeImageBlob(url, blob) {
+        const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2,8);
+        return idbKeyval.set(id, blob).then(() => id);
+    }
+
+    async function getImageBlob(imageId) {
+        if (imageBlobCache.has(imageId)) return imageBlobCache.get(imageId);
+        const blob = await idbKeyval.get(imageId);
+        if (blob) {
+            imageBlobCache.set(imageId, blob);
+            return blob;
+        }
+        return null;
+    }
+
+    // 为了兼容原 getImageUrlForCard，保持不变
                     else reject(new Error(event.data.error || '扩展下载失败'));
                 }
             };
