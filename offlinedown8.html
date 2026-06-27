@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
-<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
     <style>
         /* ===== 完整样式（与之前一致） ===== */
         :root {
@@ -20,6 +19,8 @@
             --card-bg: white;
             --card-border: #e2e8f0;
             --tag-bg: #e6f0f2;
+            --tag-hover: #cbd5e1;
+            --filter-bar-bg: white;
             --btn-bg: white;
             --btn-shadow: 0 1px 2px rgba(0,0,0,0.05);
             --modal-bg: white;
@@ -789,6 +790,9 @@
     function loadFromDB() { return new Promise((resolve, reject) => { if (!db) { reject(new Error('Database not initialized')); return; } const tx = db.transaction([STORES.tags, STORES.magnets, STORES.autoTagRules], 'readonly'); const tagsStore = tx.objectStore(STORES.tags); const magnetsStore = tx.objectStore(STORES.magnets); const rulesStore = tx.objectStore(STORES.autoTagRules); const tagsReq = tagsStore.getAll(); const magnetsReq = magnetsStore.getAll(); const rulesReq = rulesStore.getAll(); let result = { tags: [], magnets: [], rules: [] }; let pending = 3; function done() { if (--pending === 0) resolve(result); } tagsReq.onsuccess = () => { result.tags = tagsReq.result; done(); }; magnetsReq.onsuccess = () => { result.magnets = magnetsReq.result; done(); }; rulesReq.onsuccess = () => { result.rules = rulesReq.result; done(); }; tx.onerror = (e) => reject(e.target.error); }); }
     function saveFailListToDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.failList], 'readwrite'); const store = tx.objectStore(STORES.failList); const clearReq = store.clear(); clearReq.onsuccess = () => { let completed = 0; if (failList.length === 0) { resolve(); return; } for (const item of failList) { const req = store.put(item); req.onsuccess = () => { completed++; if (completed === failList.length) resolve(); }; req.onerror = (e) => reject(e.target.error); } }; clearReq.onerror = (e) => reject(e.target.error); }); }
     function loadFailListFromDB() { if (!db) return Promise.reject(); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.failList], 'readonly'); const store = tx.objectStore(STORES.failList); const req = store.getAll(); req.onsuccess = () => { failList = req.result || []; resolve(); }; req.onerror = (e) => reject(e.target.error); }); }
+    function storeImageBlob(url, blob) { if (!db) return null; const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readwrite'); const store = tx.objectStore(STORES.images); const req = store.put({ id: id, blob: blob, url: url, timestamp: Date.now() }); req.onsuccess = () => resolve(id); req.onerror = (e) => reject(e.target.error); }); }
+    async function getImageBlob(imageId) { if (!db) return null; if (imageBlobCache.has(imageId)) return imageBlobCache.get(imageId); return new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readonly'); const store = tx.objectStore(STORES.images); const req = store.get(imageId); req.onsuccess = () => { if (req.result && req.result.blob) { imageBlobCache.set(imageId, req.result.blob); resolve(req.result.blob); } else { resolve(null); } }; req.onerror = (e) => reject(e.target.error); }); }
+    async function getImageUrlForCard(magnet) { if (!magnet.imageUrl) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3ENo Preview%3C/text%3E%3C/svg%3E'; if (magnet.imageUrl.startsWith('img_')) { const blob = await getImageBlob(magnet.imageUrl); if (blob) return URL.createObjectURL(blob); else return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23e2e8f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23475569" text-anchor="middle" dy=".3em"%3EMissing%3C/text%3E%3C/svg%3E'; } return magnet.imageUrl; }
 
     // ===== 扩展代理 & 图片保存 =====
     function fetchImageViaExtension(url) { return new Promise((resolve, reject) => { if (!window.__MAGNET_HELPER_EXTENSION__) { reject(new Error('扩展未安装')); return; } const handler = (event) => { if (event.data.type === 'IMAGE_DOWNLOAD_RESULT') { window.removeEventListener('message', handler); if (event.data.success) { resolve(event.data.blob); } else { reject(new Error(event.data.error || '扩展下载失败')); } } }; window.addEventListener('message', handler); window.postMessage({ type: 'REQUEST_IMAGE_DOWNLOAD', url: url, referer: window.location.href }, '*'); setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('扩展未响应，请检查扩展是否启用')); }, 15000); }); }
@@ -851,7 +855,29 @@ function bindModalRestore() {
         // 模态框恢复逻辑已在 batchCopyLinksWithModal 中内联实现
         // 保留为空函数以避免调用错误
     }
-    async function getImageBlob(imageId) {
+function bindMagnetLinkEvents() {
+        document.querySelectorAll('.magnet-link').forEach(el => {
+            if (el.hasAttribute('data-bound')) return;
+            el.setAttribute('data-bound', 'true');
+            const url = el.getAttribute('href');
+            if (!url) return;
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                copyMagnetLink(url);
+            });
+        });
+    }
+    function showPreviewPopup(magnetLink, title, data) {
+        const name = data.name || title || '未知资源';
+        const count = data.count || 0;
+        const size = data.size ? formatSize(data.size) : '未知';
+        const type = data.file_type || data.type || '未知';
+        const hash = (magnetLink.match(/btih:([a-fA-F0-9]{40})/i) || [])[1] || '';
+
+        const shots = collectShots(data);
+        const validShots = shots.map(s => s.src).filter(src => src && src.startsWith('http'));
+        const heroSrc = validShots[0] || '';
+
         const overlay = document.createElement('div');
         overlay.className = 'card-preview-overlay';
         overlay.innerHTML = `
@@ -1009,40 +1035,6 @@ function bindModalRestore() {
     }
 
     // ===== 截图提取 =====
-// ===== 卡片预览入口 =====
-    function showCardPreview(magnetLink, title) {
-        const handler = (event) => {
-            if (event.data && event.data.type === 'MAGNET_PREVIEW_RESULT') {
-                window.removeEventListener('message', handler);
-                if (event.data.success) {
-// ===== 卡片预览入口 =====
-    function showCardPreview(magnetLink, title) {
-        const handler = (event) => {
-            if (event.data && event.data.type === 'MAGNET_PREVIEW_RESULT') {
-                window.removeEventListener('message', handler);
-                if (event.data.success) {
-                    const data = event.data.data;
-                    showPreviewPopup(magnetLink, title, data);
-                } else {
-                    showToast('❌ 预览失败: ' + (event.data.error || '未知错误'), true);
-                }
-            }
-        };
-        window.addEventListener('message', handler);
-        window.postMessage({ type: 'REQUEST_MAGNET_PREVIEW', magnet: magnetLink }, '*');
-        setTimeout(() => { window.removeEventListener('message', handler); }, 30000);
-    }
-                    const data = event.data.data;
-                    showPreviewPopup(magnetLink, title, data);
-                } else {
-                    showToast('❌ 预览失败: ' + (event.data.error || '未知错误'), true);
-                }
-            }
-        };
-        window.addEventListener('message', handler);
-        window.postMessage({ type: 'REQUEST_MAGNET_PREVIEW', magnet: magnetLink }, '*');
-        setTimeout(() => { window.removeEventListener('message', handler); }, 30000);
-    }
     function toWhatslinkImageUrl(value) {
         let url = String(value || '').trim();
         if (!url) return '';
@@ -1603,6 +1595,17 @@ function initGDriveClient() {
 function updateFilteredList() {
         const search = document.getElementById('searchInput').value.toLowerCase();
         let filtered = magnets.filter(m => {
+            if (search) {
+                const titleMatch = m.title.toLowerCase().includes(search);
+                const tagMatch = m.tagIds.some(tid => tags.find(t=>t.id===tid)?.name.toLowerCase().includes(search));
+                if (!titleMatch && !tagMatch) return false;
+            }
+            if (currentRatingFilter>0 && m.rating!==currentRatingFilter) return false;
+            return true;
+        });
+        filtered.sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+        allFilteredMagnets = filtered;
+    }
 async function renderLoadedCards() {
         const container = document.getElementById('magnetGridContainer');
         const loaded = allFilteredMagnets.slice(0, currentLoadedCount);
@@ -1624,8 +1627,23 @@ async function renderLoadedCards() {
             const shortLink = m.magnetLink.length>45 ? m.magnetLink.substring(0,45)+'...' : m.magnetLink;
             const isLocal = m.imageUrl && m.imageUrl.startsWith('img_');
             const badge = isLocal ? '<span class="local-badge" title="图片已保存到本地，永久有效"><i class="fas fa-database"></i> 本地</span>' : (m.imageUrl ? '<span class="net-badge" title="网络图片，可能失效"><i class="fas fa-globe"></i> 网络</span>' : '');
-            return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"200\" viewBox=\"0 0 400 200\"%3E%3Crect width=\"400\" height=\"200\" fill=\"%23e2e8f0\"/%3E%3Ctext x=\"50%25\" y=\"50%25\" font-family=\"Arial\" font-size=\"16\" fill=\"%23475569\" text-anchor=\"middle\" dy=\".3em\"%3ELoading...%3C/text%3E%3C/svg%3E')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn preview-card-btn" data-magnet="${escapeHtml(m.magnetLink)}" data-title="${escapeHtml(m.title)}" title="预览磁力"><i class="fas fa-eye"></i> 预览</button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`;
+            const imgUrl = m.imageUrl ? (m.imageUrl.startsWith('img_') ? '' : m.imageUrl) : '';
+            return `<div class="magnet-card" data-id="${m.id}"><input type="checkbox" class="card-checkbox" data-id="${m.id}" ${checked}><div class="preview-img" style="background-image: url('${escapeHtml(imgUrl || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'200\' viewBox=\'0 0 400 200\'%3E%3Crect width=\'400\' height=\'200\' fill=\'%23e2e8f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' font-family=\'Arial\' font-size=\'16\' fill=\'%23475569\' text-anchor=\'middle\' dy=\'.3em\'%3ENo Preview%3C/text%3E%3C/svg%3E')}')" data-img-url=""></div><div class="card-content"><div class="card-title">${escapeHtml(m.title)} ${badge}</div><div class="tag-list">${tagSpans}</div>${m.size?`<div><i class="fas fa-database"></i> ${escapeHtml(m.size)}</div>`:''}<a href="${escapeHtml(m.magnetLink)}" class="magnet-link" data-magnet="${escapeHtml(m.magnetLink)}">🔗 ${escapeHtml(shortLink)}</a><div class="card-actions"><div class="star-rating" data-id="${m.id}">${stars}</div><div><button class="icon-btn copy-magnet" data-magnet="${escapeHtml(m.magnetLink)}" title="复制磁力链接"><i class="fas fa-copy"></i></button><button class="icon-btn preview-card-btn" data-magnet="${escapeHtml(m.magnetLink)}" data-title="${escapeHtml(m.title)}" title="预览磁力"><i class="fas fa-eye"></i> 预览</button><button class="icon-btn edit-magnet" data-id="${m.id}"><i class="fas fa-edit"></i> 编辑</button><button class="icon-btn save-image-btn" data-id="${m.id}" title="保存图片到本地"><i class="fas fa-download"></i> 存本地</button><button class="icon-btn send-pikpak-btn" data-magnet="${escapeHtml(m.magnetLink)}" title="发送到 PikPak 离线下载"><i class="fas fa-cloud-upload-alt"></i> 离线</button><button class="icon-btn delete-magnet" data-id="${m.id}"><i class="fas fa-trash-alt"></i> 删除</button></div></div></div></div>`;
         }).join('');
+
+        // 处理本地图片
+        for (const card of container.querySelectorAll('.magnet-card')) {
+            const mid = parseInt(card.dataset.id);
+            const m = magnets.find(m=>m.id===mid);
+            if (m && m.imageUrl && m.imageUrl.startsWith('img_')) {
+                const url = await getImageUrlForCard(m);
+                const preview = card.querySelector('.preview-img');
+                if (preview) {
+                    preview.style.backgroundImage = `url(${url})`;
+                    preview.setAttribute('data-img-url', url);
+                }
+            }
+        }
 
         if (selectionMode) {
             document.querySelectorAll('.card-checkbox').forEach(cb => {
@@ -1708,19 +1726,6 @@ async function renderLoadedCards() {
 
         bindMagnetLinkEvents();
 
-        for (const card of container.querySelectorAll('.magnet-card')) {
-            const mid = parseInt(card.getAttribute('data-id'));
-            const m = magnets.find(m=>m.id===mid);
-            if (m) {
-                const url = await getImageUrlForCard(m);
-                const preview = card.querySelector('.preview-img');
-                if (preview) {
-                    preview.style.backgroundImage = `url(${url})`;
-                    preview.setAttribute('data-img-url', url);
-                }
-            }
-        }
-
         const trigger = document.getElementById('loadMoreTrigger');
         if (currentLoadedCount < allFilteredMagnets.length) {
             trigger.style.display = 'flex';
@@ -1729,33 +1734,14 @@ async function renderLoadedCards() {
             trigger.style.display = 'none';
         }
     }
-            });
-        });
-
-        bindMagnetLinkEvents();
-
-        for (const card of container.querySelectorAll('.magnet-card')) {
-            const mid = parseInt(card.getAttribute('data-id'));
-            const m = magnets.find(m=>m.id===mid);
-            if (m) {
-                const url = await getImageUrlForCard(m);
-                const preview = card.querySelector('.preview-img');
-                if (preview) {
-                    preview.style.backgroundImage = `url(${url})`;
-                    preview.setAttribute('data-img-url', url);
-                }
-            }
-        }
-
-        const trigger = document.getElementById('loadMoreTrigger');
-        if (currentLoadedCount < allFilteredMagnets.length) {
-            trigger.style.display = 'flex';
-            trigger.innerText = '向下滚动加载更多...';
-        } else {
-            trigger.style.display = 'none';
-        }
-    }
-
+// ===== 评分筛选 =====
+    function updateRatingFilterUI() {
+        const stars = document.querySelectorAll('#ratingFilter i');
+        stars.forEach(star => {
+            const r = parseInt(star.dataset.rating);
+            if (currentRatingFilter > 0 && r <= currentRatingFilter) {
+                star.className = 'fas fa-star active';
+            } else {
                 star.className = 'far fa-star';
             }
         });
