@@ -1316,6 +1316,7 @@ async function ensureValidToken() {
 
 
 
+
 async function backupToGDrive() {
     if (!gdriveToken) {
         alert('请先登录 Google Drive');
@@ -1335,31 +1336,35 @@ async function backupToGDrive() {
         failList: failList
     };
     const jsonStr = JSON.stringify(exportObj, null, 2);
-    const blob = new Blob(
-
-
-    async function restoreFromGDrive() {
-        if (!gdriveToken) {
-            alert('请先登录 Google Drive');
-            return;
-        }
-        if (!gdriveFileId) {
-            const id = await findDriveBackupFile();
-            if (id) gdriveFileId = id;
-            else {
-                alert('云端未找到备份文件');
-                return;
-            }
-        }
-        const url = `https://www.googleapis.com/drive/v3/files/${gdriveFileId}?alt=media`;
-        const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + gdriveToken } });
-        if (!resp.ok) {
-            const err = await resp.text();
-            throw new Error(`下载失败: ${resp.status} ${err}`);
-        }
-        const json = await resp.json();
-        if (json.tags && json.magnets) {
-            if (!confirm('恢复将覆盖当前所有数据，确定继续？')) return;
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const metadata = {
+        name: GDRIVE_BACKUP_FILENAME,
+        mimeType: 'application/json'
+    };
+    let fileId = gdriveFileId;
+    let method = 'POST';
+    let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    if (fileId) {
+        method = 'PATCH';
+        url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
+    }
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', blob);
+    const resp = await fetch(url, {
+        method: method,
+        headers: { 'Authorization': 'Bearer ' + gdriveToken },
+        body: formData
+    });
+    if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error(`上传失败: ${resp.status} ${err}`);
+    }
+    const result = await resp.json();
+    gdriveFileId = result.id;
+    document.getElementById('gdriveStatus').textContent = `✅ 备份成功 (${new Date().toLocaleString()})`;
+    showToast('云端备份成功');
+}
 
 async function restoreFromGDrive() {
     if (!gdriveToken) {
@@ -1394,95 +1399,29 @@ async function restoreFromGDrive() {
         if (json.tagOrder) tagOrder = json.tagOrder;
         else tagOrder = tags.map(t => t.id);
         if (json.failList) failList = json.failList;
-        else failList = 
-
-            container.innerHTML = result.data.map((item, idx) => {
-                return `<div class="fail-item" data-idx="${idx}" data-magnet="${escapeHtml(item.magnet)}">
-                    <div class="fail-info">
-                        <div class="fail-title">${escapeHtml(item.title || '未知资源')}</div>
-                        <div class="fail-url" style="font-size:0.7rem;color:var(--text-secondary);word-break:break-all;font-family:monospace;">
-                            ${escapeHtml(item.magnet.substring(0, 80))}...
-                        </div>
-                        <div style="font-size:0.65rem;color:#64748b;margin-top:2px;">
-                            📅 ${new Date(item.timestamp).toLocaleString()}
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <button class="preview-fail-btn btn btn-outline" style="padding:2px 10px;font-size:0.7rem;" data-magnet="${escapeHtml(item.magnet)}" data-title="${escapeHtml(item.title)}">🔍 预览</button>
-                        <button class="import-fail-btn btn btn-success" style="padding:2px 10px;font-size:0.7rem;" data-magnet="${escapeHtml(item.magnet)}" data-title="${escapeHtml(item.title)}">📥 导入</button>
-                        <button class="delete-fail-btn btn btn-danger" style="padding:2px 10px;font-size:0.7rem;" data-magnet="${escapeHtml(item.magnet)}">🗑️ 删除</button>
-                    </div>
-                </div>`;
-            }).join('');
-
-            // ---- 删除按钮 ----
-            container.querySelectorAll('.delete-fail-btn').forEach(btn => {
-                btn.onclick = async (e) => {
-                    e.stopPropagation();
-                    const magnet = btn.getAttribute('data-magnet');
-                    if (!confirm('确定删除这条失败记录吗？')) return;
-                    try {
-                        await removeFailedPreviewFromExtension(magnet);
-                        await loadFailedPreviewList();
-                        showToast('✅ 已删除');
-                    } catch (err) {
-                        showToast('❌ 删除失败: ' + err.message, true);
-                    }
-                };
-            });
-
-            // ---- 预览按钮：调用 showCardPreview 弹出预览窗，不自动删除 ----
-            container.querySelectorAll('.preview-fail-btn').forEach(btn => {
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    const magnet = btn.getAttribute('data-magnet');
-                    const title = btn.getAttribute('data-title') || '未知资源';
-                    showCardPreview(magnet, title);
-                };
-            });
-
-            // ---- 导入按钮 ----
-            container.querySelectorAll('.import-fail-btn').forEach(btn => {
-                btn.onclick = async (e) => {
-                    e.stopPropagation();
-                    const magnet = btn.getAttribute('data-magnet');
-                    const title = btn.getAttribute('data-title') || '未知资源';
-                    try {
-                        if (magnets.some(m => m.magnetLink.toLowerCase() === magnet.toLowerCase())) {
-                            showToast('⚠️ 该磁力已存在', false);
-                            return;
-                        }
-                        const newMagnet = {
-                            id: nextMagnetId++,
-                            magnetLink: magnet,
-                            title: cleanTitle(title),
-                            imageUrl: '',
-                            size: '',
-                            tagIds: [],
-                            rating: 0,
-                            createdAt: Date.now()
-                        };
-                        applyAutoTagsToMagnet(newMagnet);
-                        magnets.push(newMagnet);
-                        await saveToDB();
-                        await removeFailedPreviewFromExtension(magnet);
-                        updateFilteredList();
-                        currentLoadedCount = 0;
-                        renderLoadedCards();
-                        updateStats(allFilteredMagnets.length, magnets.length);
-                        showToast(`✅ 已导入: ${title}`);
-                        await loadFailedPreviewList();
-                    } catch (err) {
-                        showToast('❌ 导入失败: ' + err.message, true);
-                    }
-                };
-            });
-
-        } catch (err) {
-            container.innerHTML = `<div style="text-align:center;color:#ef4444;padding:1rem;">❌ 加载失败: ${escapeHtml(err.message)}</div>`;
-        }
+        else failList = [];
+        sortTagsByOrder();
+        nextTagId = tags.length ? Math.max(...tags.map(t=>t.id),0)+1 : 4;
+        nextMagnetId = magnets.length ? Math.max(...magnets.map(m=>m.id),0)+1 : 1;
+        await saveToDB();
+        await saveFilterWordsToDB();
+        await saveFailListToDB();
+        updateFilteredList();
+        currentLoadedCount = 0;
+        renderLoadedCards();
+        updateStats(allFilteredMagnets.length, magnets.length);
+        renderDraggable();
+        renderTagManagementList();
+        renderRulesList();
+        refreshRuleTagSelect();
+        renderFilterWordsList();
+        document.getElementById('gdriveStatus').textContent = `✅ 恢复成功 (${new Date().toLocaleString()})`;
+        showToast('云端恢复成功');
+    } else {
+        alert('备份文件格式无效');
     }
-    async function showFailedPreviewModal() { const container = document.getElementById('failedPreviewList'); if (container) container.innerHTML = '<div style="text-align:center;color:#64748b;padding:1rem;">⏳ 加载中...</div>'; document.getElementById('failedPreviewModal').style.display = 'flex'; await loadFailedPreviewList(); }
+}
+
 
     // ===== 批量添加（持久化存储） =====
     function saveBatchItemsToStorage() {
