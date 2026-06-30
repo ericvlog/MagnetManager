@@ -834,19 +834,41 @@
     const PP_SIGNIN = 'https://user.mypikpak.com/v1/auth/signin';
     const PP_TOKEN = 'https://user.mypikpak.com/v1/auth/token';
 
+    const PP_CORS_PROXY = 'https://corsproxy.io/?';
+
+    async function ppFetchPikPak(url, options) {
+        const proxyUrl = PP_CORS_PROXY + encodeURIComponent(url);
+        const proxyOpts = { ...options, mode: 'cors' };
+        if (proxyOpts.headers) {
+            delete proxyOpts.headers.Origin;
+            delete proxyOpts.headers.Referer;
+        }
+        let lastErr;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                const resp = await fetch(proxyUrl, proxyOpts);
+                if (resp.ok || resp.status !== 0) return resp;
+            } catch (e) { lastErr = e; }
+        }
+        throw lastErr || new Error('请求失败，请检查网络或 CORS 代理是否可用');
+    }
+
     async function ppLogin(username, password) {
         const deviceId = ppDeviceId();
-        const headers = { 'Content-Type':'application/json;charset=utf-8', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36', 'Origin':'https://mypikpak.com', 'Referer':'https://mypikpak.com/' };
+        const headers = { 'Content-Type':'application/json;charset=utf-8', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' };
+
         let meta = {};
         if (username.includes('@')) meta = { email: username };
         else if (/^\d+$/.test(username)) meta = { phone_number: username };
         else meta = { username: username };
-        const captchaResp = await fetch(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
+
+        const captchaResp = await ppFetchPikPak(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
         if (!captchaResp.ok) throw new Error('获取 captcha 失败: ' + await captchaResp.text());
         const captchaData = await captchaResp.json();
         const captchaToken = captchaData.captcha_token || '';
         if (!captchaToken) throw new Error('获取 captcha_token 失败');
-        const loginResp = await fetch(PP_SIGNIN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, client_secret:PP_CLIENT_SECRET, username, password, captcha_token:captchaToken, device_id:deviceId }) });
+
+        const loginResp = await ppFetchPikPak(PP_SIGNIN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, client_secret:PP_CLIENT_SECRET, username, password, captcha_token:captchaToken, device_id:deviceId }) });
         if (!loginResp.ok) throw new Error('登录失败: ' + await loginResp.text());
         const data = await loginResp.json();
         const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
@@ -858,8 +880,8 @@
     }
 
     async function ppRefreshToken(refreshToken) {
-        const headers = { 'Content-Type':'application/json;charset=utf-8', 'Accept':'application/json', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Origin':'https://mypikpak.com', 'Referer':'https://mypikpak.com/' };
-        const resp = await fetch(PP_TOKEN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, grant_type:'refresh_token', refresh_token:refreshToken }) });
+        const headers = { 'Content-Type':'application/json;charset=utf-8', 'Accept':'application/json', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+        const resp = await ppFetchPikPak(PP_TOKEN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, grant_type:'refresh_token', refresh_token:refreshToken }) });
         if (!resp.ok) { const t = await resp.text(); let isIG = false; try { const j = JSON.parse(t); if (j.error === 'invalid_grant') isIG = true; } catch(e) {} const err = new Error('刷新失败: ' + t); err.isInvalidGrant = isIG; throw err; }
         const data = await resp.json();
         const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
@@ -887,11 +909,11 @@
         const payload = { kind:"drive#file", upload_type:"UPLOAD_TYPE_URL", url:{"url":magnetLink}, params:{from:'manual', with_thumbnail:'true'}, folder_type:'DOWNLOAD' };
         const headers = { 'Content-Type':'application/json', 'Authorization':token, 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
         if (s.captchaToken) headers['x-captcha-token'] = s.captchaToken;
-        let resp = await fetch('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
+        let resp = await ppFetchPikPak('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
         if ((resp.status === 401 || resp.status === 403) && s.refreshToken) {
             await ppRefreshToken(s.refreshToken);
             headers['Authorization'] = ppGet('token');
-            resp = await fetch('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
+            resp = await ppFetchPikPak('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
         }
         if (!resp.ok) { const d = await resp.json().catch(() => {}); throw new Error((d && d.error_description) || `HTTP ${resp.status}`); }
         return resp.json();
@@ -914,6 +936,24 @@
             if (loginBtn2) loginBtn2.style.display = 'flex';
             if (logoutBtn) logoutBtn.style.display = 'none';
         }
+    }
+
+    const PP_REFRESH_INTERVAL = 10 * 60 * 1000;
+    let ppRefreshTimer = null;
+
+    function ppStartAutoRefresh() {
+        if (ppRefreshTimer) clearInterval(ppRefreshTimer);
+        ppRefreshTimer = setInterval(async () => {
+            const s = ppGetAll();
+            if (!s.token) return;
+            if (s.expiresAt > Date.now() + 600000) return;
+            if (s.refreshToken) {
+                try { await ppRefreshToken(s.refreshToken); return; } catch (e) {}
+            }
+            if (s.username && s.password) {
+                try { await ppLogin(s.username, s.password); return; } catch (e) {}
+            }
+        }, PP_REFRESH_INTERVAL);
     }
 
     // ----- 修改：sendToPikPakViaBridge 增加直连回退 -----
@@ -3074,6 +3114,7 @@ document.getElementById('gdriveManageBtn').onclick = async () => { await initGDr
             if (autoRunning) { setTimeout(() => { startAutoImport(); }, 500); }
 initGDriveClient();
             ppUpdateLoginUI();
+            ppStartAutoRefresh();
             console.log('初始化完成，所有按钮功能正常。');
         } catch(err){
             console.error(err);
