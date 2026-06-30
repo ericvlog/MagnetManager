@@ -1239,6 +1239,35 @@ function showCardPreview(magnetLink, title, onUpdateBatchItem = null) {
         return merged;
     }
 
+    async function ensureImageReferenceIsLocal(imageValue) {
+        if (!imageValue || typeof imageValue !== 'string') return '';
+        const trimmed = imageValue.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('img_')) return trimmed;
+        if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('data:image/')) return trimmed;
+
+        try {
+            let blob = null;
+            if (window.__MAGNET_HELPER_EXTENSION__) {
+                try {
+                    blob = await fetchImageViaExtension(trimmed);
+                } catch (extErr) {
+                    console.warn('[GDrive] 扩展取图失败，回退到标准请求', extErr);
+                }
+            }
+            if (!blob) {
+                const response = await fetch(trimmed);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                blob = await response.blob();
+            }
+            const localId = await storeImageBlob(trimmed, blob);
+            return localId || trimmed;
+        } catch (err) {
+            console.warn('[GDrive] 图片转本地失败，继续使用原始地址', err);
+            return trimmed;
+        }
+    }
+
     async function collectGDriveImagesForBackup(imageIds) {
         const uniqueIds = [...new Set((imageIds || []).filter(Boolean))];
         const records = [];
@@ -1347,13 +1376,17 @@ function showCardPreview(magnetLink, title, onUpdateBatchItem = null) {
         const quotaEl = document.getElementById('gdriveQuotaStatus');
         if (!quotaEl || !gdriveToken) return;
         try {
-            const url = 'https://www.googleapis.com/drive/v3/about?fields=storageQuota(userLimit,usage,usageInDrive,usageInDriveTrash)';
+            const url = 'https://www.googleapis.com/drive/v3/about?fields=storageQuota';
             const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + gdriveToken } });
-            if (!resp.ok) return;
+            if (!resp.ok) {
+                console.warn('[GDrive] 获取配额失败', resp.status, await resp.text().catch(() => ''));
+                quotaEl.textContent = '';
+                return;
+            }
             const data = await resp.json();
             const quota = data.storageQuota || {};
             const usage = Number(quota.usage || 0);
-            const limit = Number(quota.userLimit || 0);
+            const limit = Number(quota.limit || quota.userLimit || 0);
             if (limit > 0) {
                 const remaining = limit - usage;
                 quotaEl.textContent = `云端剩余空间：${formatBytes(Math.max(remaining, 0))}`;
@@ -1361,6 +1394,7 @@ function showCardPreview(magnetLink, title, onUpdateBatchItem = null) {
                 quotaEl.textContent = `云端已用：${formatBytes(usage)}`;
             }
         } catch (e) {
+            console.warn('[GDrive] 获取配额异常', e);
             quotaEl.textContent = '';
         }
     }
@@ -1560,11 +1594,15 @@ function loginGDrive() {
             const newFilterWords = filterWords.filter(w => !backedUpFilterWordIds.has(String(w.id)));
 
             const imageIdsToInclude = new Set();
-            newMagnets.forEach(m => {
-                if (m.imageUrl && typeof m.imageUrl === 'string' && m.imageUrl.startsWith('img_') && !backedUpImageIds.has(String(m.imageUrl))) {
-                    imageIdsToInclude.add(m.imageUrl);
+            const newMagnetsForBackup = [];
+            for (const magnet of newMagnets) {
+                const resolvedImageUrl = await ensureImageReferenceIsLocal(magnet.imageUrl);
+                const normalizedMagnet = { ...magnet, imageUrl: resolvedImageUrl || magnet.imageUrl };
+                newMagnetsForBackup.push(normalizedMagnet);
+                if (resolvedImageUrl && typeof resolvedImageUrl === 'string' && resolvedImageUrl.startsWith('img_') && !backedUpImageIds.has(String(resolvedImageUrl))) {
+                    imageIdsToInclude.add(resolvedImageUrl);
                 }
-            });
+            }
 
             if (newMagnets.length === 0 && newTags.length === 0 && newRules.length === 0 && newFilterWords.length === 0 && imageIdsToInclude.size === 0) {
                 showToast('暂无新的卡片或图片需要备份', false);
@@ -1575,7 +1613,7 @@ function loginGDrive() {
             }
 
             const mergedTags = mergeUniqueById(existingData.tags || [], newTags);
-            const mergedMagnets = mergeUniqueById(existingData.magnets || [], newMagnets);
+            const mergedMagnets = mergeUniqueById(existingData.magnets || [], newMagnetsForBackup);
             const mergedRules = mergeUniqueById(existingData.autoTagRules || [], newRules);
             const mergedFilterWords = mergeUniqueById(existingData.filterWords || [], newFilterWords);
             const mergedFailList = mergeUniqueByKey(existingData.failList || [], failList || [], 'cardId');
