@@ -1588,21 +1588,29 @@ function loginGDrive() {
             (existingData.filterWords || []).forEach(item => backedUpFilterWordIds.add(String(item.id)));
             existingImages.forEach(item => backedUpImageIds.add(String(item.id)));
 
-            const newMagnets = magnets.filter(m => !backedUpMagnetIds.has(String(m.id)));
+            const existingMagnetMap = new Map((existingData.magnets || []).map(item => [String(item.id), item]));
             const newTags = tags.filter(t => !backedUpTagIds.has(String(t.id)));
             const newRules = autoTagRules.filter(r => !backedUpRuleIds.has(String(r.id)));
             const newFilterWords = filterWords.filter(w => !backedUpFilterWordIds.has(String(w.id)));
 
             const imageIdsToInclude = new Set();
             const newMagnetsForBackup = [];
-            for (const magnet of newMagnets) {
+            for (const magnet of magnets) {
                 const resolvedImageUrl = await ensureImageReferenceIsLocal(magnet.imageUrl);
                 const normalizedMagnet = { ...magnet, imageUrl: resolvedImageUrl || magnet.imageUrl };
-                newMagnetsForBackup.push(normalizedMagnet);
-                if (resolvedImageUrl && typeof resolvedImageUrl === 'string' && resolvedImageUrl.startsWith('img_') && !backedUpImageIds.has(String(resolvedImageUrl))) {
+                const isNewMagnet = !backedUpMagnetIds.has(String(magnet.id));
+                const currentCloudMagnet = existingMagnetMap.get(String(magnet.id));
+                const needsMagnetRefresh = isNewMagnet || (currentCloudMagnet && String(currentCloudMagnet.imageUrl || '') !== String(normalizedMagnet.imageUrl || ''));
+                const needsImageBackup = resolvedImageUrl && typeof resolvedImageUrl === 'string' && resolvedImageUrl.startsWith('img_') && !backedUpImageIds.has(String(resolvedImageUrl));
+                if (needsMagnetRefresh || needsImageBackup) {
+                    newMagnetsForBackup.push(normalizedMagnet);
+                }
+                if (needsImageBackup) {
                     imageIdsToInclude.add(resolvedImageUrl);
                 }
             }
+
+            const newMagnets = magnets.filter(m => !backedUpMagnetIds.has(String(m.id)));
 
             if (newMagnets.length === 0 && newTags.length === 0 && newRules.length === 0 && newFilterWords.length === 0 && imageIdsToInclude.size === 0) {
                 showToast('暂无新的卡片或图片需要备份', false);
