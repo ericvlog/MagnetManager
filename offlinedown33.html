@@ -902,10 +902,26 @@
     const PP_SIGNIN = 'https://user.mypikpak.com/v1/auth/signin';
     const PP_TOKEN = 'https://user.mypikpak.com/v1/auth/token';
 
-    const PP_CORS_PROXY = 'https://ancient-firefly-8a9a.myteamcloud.workers.dev/?url=';
 
-    async function ppFetchPikPak(url, options) {
-        const proxyUrl = PP_CORS_PROXY + encodeURIComponent(url);
+
+    const PP_CORS_PROXIES = [
+        'https://ancient-firefly-8a9a.myteamcloud.workers.dev/?url=',
+        'https://api.allorigins.win/raw?url=',
+        'https://corsproxy.io/?url=',
+    ];
+
+    // 用户可自定义代理（添加到 localStorage pp_cors_proxy）
+    function ppGetProxy() {
+        const custom = localStorage.getItem('pp_cors_proxy');
+        if (custom) return [custom];
+        return PP_CORS_PROXIES;
+    }
+
+    async function ppFetchPikPak(url, options, proxyIndex) {
+        const proxies = ppGetProxy();
+        if (proxyIndex === undefined) proxyIndex = 0;
+        if (proxyIndex >= proxies.length) throw new Error('所有 CORS 代理均不可用，请检查网络');
+        const proxyUrl = proxies[proxyIndex] + encodeURIComponent(url);
         const proxyOpts = { ...options, mode: 'cors' };
         if (proxyOpts.headers) {
             delete proxyOpts.headers.Origin;
@@ -915,10 +931,15 @@
         for (let attempt = 0; attempt < 2; attempt++) {
             try {
                 const resp = await fetch(proxyUrl, proxyOpts);
-                if (resp.ok || resp.status !== 0) return resp;
+                if (resp.ok || resp.status !== 0) {
+                    const isProxyDead = resp.status === 400 || resp.status === 409 || resp.status === 429 || resp.status === 403;
+                    if (isProxyDead) break;
+                    return resp;
+                }
             } catch (e) { lastErr = e; }
         }
-        throw lastErr || new Error('请求失败，请检查网络或 CORS 代理是否可用');
+        // 当前代理不可用，尝试下一个
+        return ppFetchPikPak(url, options, proxyIndex + 1);
     }
 
     async function ppLogin(username, password, interactive) {
