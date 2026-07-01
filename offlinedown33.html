@@ -793,7 +793,7 @@
 <div id="gdriveModal" class="modal"><div class="modal-card" style="max-width:420px;"><div class="flex-between"><h3>☁️ Google Drive 云端</h3><button id="closeGdriveModalBtn" class="icon-btn">✖</button></div><div style="padding:1.5rem;display:flex;flex-direction:column;gap:16px;"><div id="gdriveLoginSection" style="display:flex;align-items:center;justify-content:space-between;"><span id="gdriveUserStatus" style="font-weight:600;">未登录</span><button id="gdriveLoginBtn" class="btn" style="background:#4285f4;color:white;">🔑 登录</button></div><div id="gdriveActionsSection" style="display:none;flex-direction:column;gap:12px;"><div style="display:flex;gap:10px;flex-wrap:wrap;"><button id="gdriveBackupBtn" class="btn btn-success" style="flex:1;">☁️ 备份到云端</button><button id="gdriveRestoreBtn" class="btn btn-primary" style="flex:1;">☁️ 从云端恢复</button></div><button id="gdriveCleanupBtn" class="btn btn-outline">🧹 清理云端孤儿图片</button><div id="gdriveStatus" style="font-size:0.85rem;padding:8px 12px;background:var(--tag-bg);border-radius:12px;"></div><div id="gdriveQuotaStatus" style="font-size:0.85rem;color:#64748b;text-align:center;"></div></div></div></div></div>
 
 <!-- ===== PikPak 登录模态框（无扩展时使用） ===== -->
-<div id="pikpakModal" class="modal"><div class="modal-card" style="max-width:520px;"><div class="flex-between"><h3>🔑 PikPak 登录（页面直连）</h3><button id="closePikpakModalBtn" class="icon-btn">✖</button></div><div style="padding:1.5rem;display:flex;flex-direction:column;gap:14px;"><div style="font-size:0.85rem;line-height:1.5;color:var(--text-secondary);">登录后可在无扩展环境下（如手机浏览器）直接离线下载到 PikPak。密码仅存储在你本地浏览器中。</div><input type="text" id="pagePikpakUser" placeholder="邮箱 / 手机号 / 用户名" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><input type="password" id="pagePikpakPass" placeholder="密码" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><div id="pagePikpakStatus" style="font-size:0.85rem;padding:8px 12px;background:var(--tag-bg);border-radius:12px;text-align:center;">未登录</div><div id="ppCaptchaArea" style="display:none;border:1px solid var(--border-color);border-radius:12px;overflow:hidden;text-align:center;"><iframe id="ppCaptchaFrame" style="width:100%;height:500px;border:none;" allow="accelerometer;gyroscope;camera;geolocation;microphone"></iframe><button id="ppCaptchaDoneBtn" class="btn btn-primary" style="margin:10px auto;display:block;">✅ 已完成验证</button></div><div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;"><button id="pagePikpakLoginBtn2" class="btn btn-primary" style="flex:1;">登录</button><button id="pagePikpakRefreshBtn" class="btn btn-outline" style="display:none;flex:1;">🔄 刷新 Token</button><button id="pagePikpakLogoutBtn" class="btn btn-danger" style="display:none;flex:1;">退出登录</button></div></div></div></div>
+<div id="pikpakModal" class="modal"><div class="modal-card" style="max-width:420px;"><div class="flex-between"><h3>🔑 PikPak 登录（页面直连）</h3><button id="closePikpakModalBtn" class="icon-btn">✖</button></div><div style="padding:1.5rem;display:flex;flex-direction:column;gap:14px;"><div style="font-size:0.85rem;line-height:1.5;color:var(--text-secondary);">登录后可在无扩展环境下（如手机浏览器）直接离线下载到 PikPak。密码仅存储在你本地浏览器中。</div><input type="text" id="pagePikpakUser" placeholder="邮箱 / 手机号 / 用户名" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><input type="password" id="pagePikpakPass" placeholder="密码" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><div id="pagePikpakStatus" style="font-size:0.85rem;padding:8px 12px;background:var(--tag-bg);border-radius:12px;text-align:center;">未登录</div><div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;"><button id="pagePikpakLoginBtn2" class="btn btn-primary" style="flex:1;">登录</button><button id="pagePikpakRefreshBtn" class="btn btn-outline" style="display:none;flex:1;">🔄 刷新 Token</button><button id="pagePikpakLogoutBtn" class="btn btn-danger" style="display:none;flex:1;">退出登录</button></div></div></div></div>
 
 <script>
 (function(){
@@ -888,7 +888,7 @@
     function ppDeviceId() {
         let id = ppGet('deviceId');
         if (id) return id;
-        const arr = new Uint8Array(32);
+        const arr = new Uint8Array(16);
         crypto.getRandomValues(arr);
         id = Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
         ppSet('deviceId', id);
@@ -902,26 +902,10 @@
     const PP_SIGNIN = 'https://user.mypikpak.com/v1/auth/signin';
     const PP_TOKEN = 'https://user.mypikpak.com/v1/auth/token';
 
+    const PP_CORS_PROXY = 'https://ancient-firefly-8a9a.myteamcloud.workers.dev/?url=';
 
-
-    const PP_CORS_PROXIES = [
-        'https://ancient-firefly-8a9a.myteamcloud.workers.dev/?url=',
-        'https://api.allorigins.win/raw?url=',
-        'https://corsproxy.io/?url=',
-    ];
-
-    // 用户可自定义代理（添加到 localStorage pp_cors_proxy）
-    function ppGetProxy() {
-        const custom = localStorage.getItem('pp_cors_proxy');
-        if (custom) return [custom];
-        return PP_CORS_PROXIES;
-    }
-
-    async function ppFetchPikPak(url, options, proxyIndex) {
-        const proxies = ppGetProxy();
-        if (proxyIndex === undefined) proxyIndex = 0;
-        if (proxyIndex >= proxies.length) throw new Error('所有 CORS 代理均不可用，请检查网络');
-        const proxyUrl = proxies[proxyIndex] + encodeURIComponent(url);
+    async function ppFetchPikPak(url, options) {
+        const proxyUrl = PP_CORS_PROXY + encodeURIComponent(url);
         const proxyOpts = { ...options, mode: 'cors' };
         if (proxyOpts.headers) {
             delete proxyOpts.headers.Origin;
@@ -931,18 +915,13 @@
         for (let attempt = 0; attempt < 2; attempt++) {
             try {
                 const resp = await fetch(proxyUrl, proxyOpts);
-                if (resp.ok || resp.status !== 0) {
-                    const isProxyDead = resp.status === 400 || resp.status === 409 || resp.status === 429 || resp.status === 403;
-                    if (isProxyDead) break;
-                    return resp;
-                }
+                if (resp.ok || resp.status !== 0) return resp;
             } catch (e) { lastErr = e; }
         }
-        // 当前代理不可用，尝试下一个
-        return ppFetchPikPak(url, options, proxyIndex + 1);
+        throw lastErr || new Error('请求失败，请检查网络或 CORS 代理是否可用');
     }
 
-    async function ppLogin(username, password, interactive) {
+    async function ppLogin(username, password) {
         const deviceId = ppDeviceId();
         const headers = { 'Content-Type':'application/json;charset=utf-8', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' };
 
@@ -951,173 +930,25 @@
         else if (/^\d+$/.test(username)) meta = { phone_number: username };
         else meta = { username: username };
 
-        // 第一步：获取 captcha_token（自动）
-        let captchaToken = await ppCaptchaInit(deviceId, headers, meta);
+        const captchaResp = await ppFetchPikPak(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
+        if (!captchaResp.ok) throw new Error('获取 captcha 失败: ' + await captchaResp.text());
+        const captchaData = await captchaResp.json();
+        const captchaToken = captchaData.captcha_token || '';
         if (!captchaToken) throw new Error('获取 captcha_token 失败');
 
-        // 第二步：尝试登录，如果遇到 captcha_url 则需要用户手动验证
-        let loginResult = await ppTrySignIn(username, password, deviceId, headers, captchaToken);
-        if (loginResult) return loginResult;
-
-        if (!interactive) throw new Error('需要安全验证（captcha），请手动点击登录按钮重新登录');
-
-        // 第三步：需要用户手动完成拼图验证
-        const statusEl = document.getElementById('pagePikpakStatus');
-        statusEl.textContent = '⏳ 需要安全验证，请在下方完成拼图...';
-        statusEl.style.color = '#ff9800';
-        const captchaToken2 = await ppShowCaptcha(deviceId, headers, meta);
-        if (!captchaToken2) throw new Error('安全验证失败或已取消');
-
-        loginResult = await ppTrySignIn(username, password, deviceId, headers, captchaToken2);
-        if (loginResult) return loginResult;
-        throw new Error('安全验证后登录仍然失败');
-    }
-
-    async function ppCaptchaInit(deviceId, headers, meta) {
-        // 先尝试直连（用户真实 IP，可能绕过风控）
-        try {
-            const directResp = await fetch(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
-            if (directResp.ok) {
-                const data = await directResp.json();
-                if (data.captcha_token) {
-                    ppCaptchaData = data;
-                    return data.captcha_token;
-                }
-            }
-        } catch(e) { /* CORS 限制，走 Worker 代理 */ }
-
-        // 直连失败，走 Worker 代理
-        const resp = await ppFetchPikPak(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
-        if (!resp.ok) throw new Error('获取 captcha 失败: ' + await resp.text());
-        const data = await resp.json();
-        ppCaptchaData = data;
-        return data.captcha_token || '';
-    }
-
-    async function ppTrySignIn(username, password, deviceId, headers, captchaToken) {
-        // 尝试直连登录（用户真实 IP）
-        try {
-            const directResp = await fetch(PP_SIGNIN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, client_secret:PP_CLIENT_SECRET, username, password, captcha_token:captchaToken, device_id:deviceId }) });
-            if (directResp.ok) {
-                const data = await directResp.json();
-                const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
-                const expiresAt = Date.now() + (data.expires_in || 7200) * 1000;
-                ppSet('token', fullToken); ppSet('refreshToken', data.refresh_token || '');
-                ppSet('expiresAt', String(expiresAt)); ppSet('captchaToken', captchaToken);
-                ppSet('deviceId', deviceId); ppSet('username', username); ppSet('password', password);
-                return data;
-            }
-            const errText = await directResp.text();
-            if (errText.includes('captcha_url') || errText.includes('result:review') || errText.includes('captcha_invalid')) return null;
-            throw new Error('登录失败: ' + errText);
-        } catch(e) {
-            // CORS 限制，走 Worker 代理
-        }
-
-        // 走 Worker 代理
-        const resp = await ppFetchPikPak(PP_SIGNIN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, client_secret:PP_CLIENT_SECRET, username, password, captcha_token:captchaToken, device_id:deviceId }) });
-        if (resp.ok) {
-            const data = await resp.json();
-            const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
-            const expiresAt = Date.now() + (data.expires_in || 7200) * 1000;
-            ppSet('token', fullToken); ppSet('refreshToken', data.refresh_token || '');
-            ppSet('expiresAt', String(expiresAt)); ppSet('captchaToken', captchaToken);
-            ppSet('deviceId', deviceId); ppSet('username', username); ppSet('password', password);
-            return data;
-        }
-        const errText = await resp.text();
-        if (errText.includes('captcha_url') || errText.includes('result:review') || errText.includes('captcha_invalid')) return null;
-        throw new Error('登录失败: ' + errText);
-    }
-
-    let ppCaptchaData = null;
-    let ppCaptchaResolve = null;
-    let ppCaptchaTimeout = null;
-
-    function ppCaptchaCleanup() {
-        const area = document.getElementById('ppCaptchaArea');
-        if (area) { area.style.display = 'none'; const f = document.getElementById('ppCaptchaFrame'); if (f) f.src = ''; }
-        if (ppCaptchaTimeout) { clearTimeout(ppCaptchaTimeout); ppCaptchaTimeout = null; }
-        if (ppCaptchaResolve) { ppCaptchaResolve(''); ppCaptchaResolve = null; }
-    }
-
-    async function ppShowCaptcha(deviceId, headers, meta) {
-        const area = document.getElementById('ppCaptchaArea');
-        const frame = document.getElementById('ppCaptchaFrame');
-        const statusEl = document.getElementById('pagePikpakStatus');
-
-        let captchaUrl = (ppCaptchaData && ppCaptchaData.url) || '';
-        if (!captchaUrl) {
-            try {
-                const r = await fetch(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
-                if (r.ok) { const d = await r.json(); captchaUrl = d.url || ''; ppCaptchaData = d; }
-            } catch(e) {}
-            if (!captchaUrl) {
-                const r = await ppFetchPikPak(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
-                if (r.ok) { const d = await r.json(); captchaUrl = d.url || (d.captcha_url || ''); ppCaptchaData = d; }
-            }
-        }
-
-        if (!captchaUrl) {
-            statusEl.textContent = '❌ 操作过于频繁，请等待 30-60 分钟后重试';
-            statusEl.style.color = '#ef4444';
-            throw new Error('操作过于频繁，请等待 30-60 分钟后重试');
-        }
-
-        area.style.display = 'block';
-        frame.src = captchaUrl;
-        statusEl.textContent = '⏳ 请在下方完成安全验证，然后点击「已完成验证」';
-        statusEl.style.color = '#ff9800';
-
-        return new Promise((resolve, reject) => {
-            ppCaptchaResolve = resolve;
-
-            document.getElementById('ppCaptchaDoneBtn').onclick = async function captchaDone() {
-                this.disabled = true; this.textContent = '⏳ 验证中...';
-                try {
-                    let r;
-                    try { r = await fetch(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) }); } catch(e) {}
-                    if (!r || !r.ok) r = await ppFetchPikPak(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
-                    if (r && r.ok) {
-                        const d = await r.json();
-                        if (d.captcha_token) {
-                            ppCaptchaCleanup();
-                            resolve(d.captcha_token);
-                            return;
-                        }
-                    }
-                } catch(e) {}
-                this.disabled = false; this.textContent = '✅ 已完成验证';
-                ppCaptchaCleanup();
-                resolve('');
-            };
-
-            ppCaptchaTimeout = setTimeout(() => {
-                ppCaptchaCleanup();
-                statusEl.textContent = '❌ 安全验证超时';
-                statusEl.style.color = '#ef4444';
-                reject(new Error('安全验证超时'));
-            }, 120000);
-        });
+        const loginResp = await ppFetchPikPak(PP_SIGNIN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, client_secret:PP_CLIENT_SECRET, username, password, captcha_token:captchaToken, device_id:deviceId }) });
+        if (!loginResp.ok) throw new Error('登录失败: ' + await loginResp.text());
+        const data = await loginResp.json();
+        const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
+        const expiresAt = Date.now() + (data.expires_in || 7200) * 1000;
+        ppSet('token', fullToken); ppSet('refreshToken', data.refresh_token || '');
+        ppSet('expiresAt', String(expiresAt)); ppSet('captchaToken', captchaToken);
+        ppSet('deviceId', deviceId); ppSet('username', username); ppSet('password', password);
+        return data;
     }
 
     async function ppRefreshToken(refreshToken) {
         const headers = { 'Content-Type':'application/json;charset=utf-8', 'Accept':'application/json', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
-        // 直连刷新
-        try {
-            const directResp = await fetch(PP_TOKEN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, grant_type:'refresh_token', refresh_token:refreshToken }) });
-            if (directResp.ok) {
-                const data = await directResp.json();
-                const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
-                const expiresAt = Date.now() + (data.expires_in || 7200) * 1000;
-                ppSet('token', fullToken); ppSet('refreshToken', data.refresh_token || refreshToken);
-                ppSet('expiresAt', String(expiresAt));
-                return data;
-            }
-            const t = await directResp.text(); let isIG = false; try { const j = JSON.parse(t); if (j.error === 'invalid_grant') isIG = true; } catch(e) {} const err = new Error('刷新失败: ' + t); err.isInvalidGrant = isIG; throw err;
-        } catch(e) { if (e.isInvalidGrant) throw e; /* CORS 失败则走 Worker */ }
-
-        // 走 Worker 代理
         const resp = await ppFetchPikPak(PP_TOKEN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, grant_type:'refresh_token', refresh_token:refreshToken }) });
         if (!resp.ok) { const t = await resp.text(); let isIG = false; try { const j = JSON.parse(t); if (j.error === 'invalid_grant') isIG = true; } catch(e) {} const err = new Error('刷新失败: ' + t); err.isInvalidGrant = isIG; throw err; }
         const data = await resp.json();
@@ -1146,13 +977,6 @@
         const payload = { kind:"drive#file", upload_type:"UPLOAD_TYPE_URL", url:{"url":magnetLink}, params:{from:'manual', with_thumbnail:'true'}, folder_type:'DOWNLOAD' };
         const headers = { 'Content-Type':'application/json', 'Authorization':token, 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
         if (s.captchaToken) headers['x-captcha-token'] = s.captchaToken;
-        // 直连
-        try {
-            let r = await fetch('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
-            if (r.ok) return r.json();
-            if ((r.status === 401 || r.status === 403) && s.refreshToken) { await ppRefreshToken(s.refreshToken); headers['Authorization'] = ppGet('token'); r = await fetch('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) }); if (r.ok) return r.json(); }
-        } catch(e) {}
-        // 走 Worker 代理
         let resp = await ppFetchPikPak('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
         if ((resp.status === 401 || resp.status === 403) && s.refreshToken) {
             await ppRefreshToken(s.refreshToken);
@@ -3121,14 +2945,14 @@ document.getElementById('gdriveManageBtn').onclick = async () => { await initGDr
 
         // ===== PikPak 直连登录 =====
         document.getElementById('pagePikpakLoginBtn').onclick = () => { ppUpdateLoginUI(); document.getElementById('pikpakModal').style.display = 'flex'; };
-        document.getElementById('closePikpakModalBtn').onclick = () => { document.getElementById('pikpakModal').style.display = 'none'; ppCaptchaCleanup(); };
-        document.getElementById('pikpakModal').onclick = (e) => { if (e.target === e.currentTarget) { document.getElementById('pikpakModal').style.display = 'none'; ppCaptchaCleanup(); } };
+        document.getElementById('closePikpakModalBtn').onclick = () => document.getElementById('pikpakModal').style.display = 'none';
+        document.getElementById('pikpakModal').onclick = (e) => { if (e.target === e.currentTarget) document.getElementById('pikpakModal').style.display = 'none'; };
         document.getElementById('pagePikpakLoginBtn2').onclick = async () => {
             const u = document.getElementById('pagePikpakUser').value.trim();
             const p = document.getElementById('pagePikpakPass').value.trim();
             if (!u || !p) { showToast('请输入账号和密码', true); return; }
             const s = document.getElementById('pagePikpakStatus'); s.textContent = '⏳ 登录中...'; s.style.color = '#306eff';
-            try { await ppLogin(u, p, true); s.textContent = '✅ 登录成功'; s.style.color = '#28a745'; ppUpdateLoginUI(); showToast('✅ PikPak 登录成功'); document.getElementById('pikpakModal').style.display = 'none'; }
+            try { await ppLogin(u, p); s.textContent = '✅ 登录成功'; s.style.color = '#28a745'; ppUpdateLoginUI(); showToast('✅ PikPak 登录成功'); document.getElementById('pikpakModal').style.display = 'none'; }
             catch (err) { s.textContent = '❌ ' + err.message; s.style.color = '#ef4444'; showToast('❌ 登录失败: ' + err.message, true); }
         };
         document.getElementById('pagePikpakPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('pagePikpakLoginBtn2').click(); });
@@ -3149,11 +2973,11 @@ document.getElementById('gdriveManageBtn').onclick = async () => { await initGDr
                     catch (e) {
                         if (ss.username && ss.password) {
                             statusEl.textContent = '⏳ refresh_token 已过期，尝试重新登录...';
-                            await ppLogin(ss.username, ss.password, true);
+                            await ppLogin(ss.username, ss.password);
                         } else { throw e; }
                     }
                 } else {
-                    await ppLogin(ss.username, ss.password, true);
+                    await ppLogin(ss.username, ss.password);
                 }
                 const now = ppGetAll();
                 statusEl.textContent = '✅ 刷新成功，有效期至 ' + new Date(now.expiresAt).toLocaleTimeString();
