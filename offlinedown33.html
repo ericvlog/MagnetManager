@@ -902,7 +902,7 @@
     const PP_SIGNIN = 'https://user.mypikpak.com/v1/auth/signin';
     const PP_TOKEN = 'https://user.mypikpak.com/v1/auth/token';
 
-    const PP_CORS_PROXY = 'https://ancient-firefly-8a9a.myteamcloud.workers.dev/?url=';
+    const PP_CORS_PROXY = 'http://localhost:3000/?url=';
 
     async function ppFetchPikPak(url, options) {
         const proxyUrl = PP_CORS_PROXY + encodeURIComponent(url);
