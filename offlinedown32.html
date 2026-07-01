@@ -56,7 +56,8 @@
         .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); transition: width 0.3s ease; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
         .sidebar.collapsed { width: 70px; }
         .sidebar-header { padding: 1.2rem 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
-        .sidebar.collapsed .sidebar-header { justify-content: center; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; flex-direction: column; align-items: center; gap: 6px; padding: 0.8rem 0; }
+        .sidebar.collapsed .sidebar-header > div { flex-direction: column; align-items: center; gap: 6px; width: auto; }
         .sidebar-logo { font-weight: bold; font-size: 1.2rem; white-space: nowrap; }
         .sidebar.collapsed .sidebar-logo { display: none; }
         .toggle-sidebar-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--text-secondary); }
@@ -230,15 +231,20 @@
         .float-hide-btn.hidden i.fa-image { display: none; }
         .float-hide-btn.hidden i.fa-eye-slash { display: inline; }
         .float-hide-btn i.fa-eye-slash { display: none; }
+        .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border-color); text-align: center; position: sticky; bottom: 0; background: var(--bg-sidebar); }
+        .sidebar.collapsed .sidebar-footer { padding: 0.8rem 0; }
         .theme-switch-btn {
-            margin-left: 12px;
             background: var(--tag-bg);
             border: none;
             border-radius: 30px;
-            padding: 6px 12px;
+            padding: 8px 16px;
             cursor: pointer;
             color: var(--text-primary);
+            font-size: 1.1rem;
+            width: 100%;
+            max-width: 120px;
         }
+        .sidebar.collapsed .theme-switch-btn { max-width: none; padding: 8px 0; }
         .hint-text { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
         .batch-links-container {
             max-height: 60vh;
@@ -715,7 +721,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">⚡ 磁力管理器</div>
-            <div style="display: flex; gap: 8px;"><button id="themeToggleBtn" class="theme-switch-btn" title="切换白天/夜晚模式">🌙</button><button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button></div>
+            <button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button>
         </div>
         <div class="sidebar-menu">
             <div class="menu-item" id="menuAddMagnet"><i class="fas fa-plus-circle"></i><span>➕ 添加磁力</span></div>
@@ -739,10 +745,11 @@
                 <div class="menu-item" id="menuResetData"><i class="fas fa-trash-alt"></i><span>🗑️ 重置所有数据</span></div>
             </details></div>
         </div>
+        <div class="sidebar-footer"><button id="themeToggleBtn" class="theme-switch-btn" title="切换白天/夜晚模式"><i class="fas fa-moon"></i></button></div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="main-content">
-        <div class="top-actions">
+        <div class="drag-area" id="toolbarDragArea"><div class="drag-header" data-target="toolbarContent"><div class="drag-title"><i class="fas fa-tools"></i> 🔧 工具栏</div><i class="fas fa-chevron-down toggle-icon"></i></div><div class="drag-content" id="toolbarContent"><div class="top-actions">
             <button class="btn btn-success" id="topAddMagnetBtn">➕ 添加磁力</button>
             <button id="importFromExtensionBtn" class="btn" style="background:#306eff;color:white;"><i class="fas fa-cloud-download-alt"></i> 扩展导入</button>
             <div class="auto-import-group">
@@ -754,14 +761,14 @@
             </div>
 <button id="gdriveManageBtn" class="btn btn-primary" style="background:#4285f4;color:white;">☁️ 云端管理</button>
 <button id="pagePikpakLoginBtn" class="btn" style="background:#306eff;color:white;"><i class="fas fa-key"></i> <span id="pagePikpakBtnLabel">PikPak 登录</span></button>
-        </div>
+        </div></div></div>
         <div class="drag-area" id="tagsDragArea"><div class="drag-header" data-target="tagsContent"><div class="drag-title"><i class="fas fa-hashtag"></i> 🏷️ 拖拽标签可排序（点击筛选）</div><i class="fas fa-chevron-down toggle-icon"></i></div><div class="drag-content" id="tagsContent"><div id="draggableTagsList" class="tags-container"></div></div></div>
         <div class="filter-bar">
             <input type="text" id="searchInput" placeholder="🔍 搜索标题或标签" style="width:200px">
             <div class="rating-filter"><span>评分筛选：</span><div class="star-filter" id="ratingFilter"><i data-rating="1" class="far fa-star"></i><i data-rating="2" class="far fa-star"></i><i data-rating="3" class="far fa-star"></i><i data-rating="4" class="far fa-star"></i><i data-rating="5" class="far fa-star"></i></div><button id="clearRatingFilter" class="btn-outline btn" style="padding:4px 12px;">清除</button></div>
 
-            <div class="page-size-selector"><span>每次加载：</span><select id="pageSizeSelect"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option></select></div>
-            <button id="resetFilterBtn" class="btn btn-outline">重置</button><div id="statsDisplay" class="stats-badge">📊 0 张卡片</div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;"><span style="font-size:0.8rem;white-space:nowrap;">每次加载</span><select id="pageSizeSelect" style="width:65px;"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option></select></div>
+            <button id="resetFilterBtn" class="btn btn-outline" style="white-space:nowrap;">重置</button><div id="statsDisplay" class="stats-badge">📊 0 张卡片</div>
         </div>
         <div id="magnetGridContainer" class="magnet-grid"></div>
         <div id="loadMoreTrigger" class="loading-trigger" style="display: none;">向下滚动加载更多...</div>
@@ -828,7 +835,20 @@
     function saveCollapsedState() { localStorage.setItem('collapsed_tags_v26', collapsedTags); }
     function loadCollapsedState() { const t = localStorage.getItem('collapsed_tags_v26'); if (t !== null) collapsedTags = t === 'true'; }
     function toggleContent(targetId, iconElement, isCollapsed) { const content = document.getElementById(targetId); if (!content) return; if (isCollapsed) { content.classList.add('collapsed'); if (iconElement) iconElement.classList.add('collapsed'); } else { content.classList.remove('collapsed'); if (iconElement) iconElement.classList.remove('collapsed'); } }
-    function bindCollapsible() { const tagsHeader = document.querySelector('#tagsDragArea .drag-header'); const tagsIcon = tagsHeader.querySelector('.toggle-icon'); tagsHeader.addEventListener('click', () => { collapsedTags = !collapsedTags; toggleContent('tagsContent', tagsIcon, collapsedTags); saveCollapsedState(); }); toggleContent('tagsContent', tagsIcon, collapsedTags); }
+    function bindCollapsible() {
+        const tagsHeader = document.querySelector('#tagsDragArea .drag-header');
+        const tagsIcon = tagsHeader.querySelector('.toggle-icon');
+        tagsHeader.addEventListener('click', () => { collapsedTags = !collapsedTags; toggleContent('tagsContent', tagsIcon, collapsedTags); saveCollapsedState(); });
+        toggleContent('tagsContent', tagsIcon, collapsedTags);
+
+        const toolbarHeader = document.querySelector('#toolbarDragArea .drag-header');
+        if (toolbarHeader) {
+            const toolbarIcon = toolbarHeader.querySelector('.toggle-icon');
+            let collapsedToolbar = localStorage.getItem('collapsed_toolbar') === 'true';
+            toolbarHeader.addEventListener('click', () => { collapsedToolbar = !collapsedToolbar; toggleContent('toolbarContent', toolbarIcon, collapsedToolbar); localStorage.setItem('collapsed_toolbar', collapsedToolbar); });
+            toggleContent('toolbarContent', toolbarIcon, collapsedToolbar);
+        }
+    }
     function saveTagOrder() { localStorage.setItem('tagOrder', JSON.stringify(tagOrder)); }
     function sortTagsByOrder() { if (!tagOrder || tagOrder.length === 0) return; const orderMap = new Map(); tagOrder.forEach((id, idx) => orderMap.set(id, idx)); tags.sort((a, b) => (orderMap.get(a.id) ?? Infinity) - (orderMap.get(b.id) ?? Infinity)); }
     function updateTagOrderFromTags() { tagOrder = tags.map(t => t.id); saveTagOrder(); }
@@ -1395,8 +1415,8 @@ function showCardPreview(magnetLink, title, onUpdateBatchItem = null) {
     async function restoreImagesFromFolder() { const input = document.createElement('input'); input.type = 'file'; input.webkitdirectory = true; input.directory = true; input.multiple = true; input.onchange = async (e) => { const files = Array.from(e.target.files); const imageFiles = files.filter(file => { const ext = file.name.split('.').pop().toLowerCase(); return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(ext); }); if (imageFiles.length === 0) { showToast('未找到图片文件', true); return; } const clearTx = db.transaction([STORES.images], 'readwrite'); const clearStore = clearTx.objectStore(STORES.images); await new Promise((resolve, reject) => { const clearReq = clearStore.clear(); clearReq.onsuccess = resolve; clearReq.onerror = (err) => reject(err); }); imageBlobCache.clear(); let successCount = 0; let failCount = 0; showProgressModal(); updateProgress(0, imageFiles.length, 0, 0); for (let i = 0; i < imageFiles.length; i++) { const file = imageFiles[i]; try { let id = file.name; const lastDot = id.lastIndexOf('.'); if (lastDot !== -1) id = id.substring(0, lastDot); const blob = await file.arrayBuffer().then(buf => new Blob([buf], {type: file.type})); await new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readwrite'); const store = tx.objectStore(STORES.images); const req = store.put({ id: id, blob: blob, url: '', timestamp: Date.now() }); req.onsuccess = resolve; req.onerror = (err) => reject(err); tx.oncomplete = resolve; }); successCount++; } catch (err) { console.error(`导入图片 ${file.name} 失败:`, err); failCount++; } updateProgress(i + 1, imageFiles.length, successCount, failCount); await new Promise(r => setTimeout(r, 10)); } hideProgressModal(); showToast(`已导入 ${successCount} 张图片，失败 ${failCount} 张`, failCount > 0); let fixedCount = 0; for (const magnet of magnets) { if (magnet.imageUrl && magnet.imageUrl.startsWith('img_')) { let pureId = magnet.imageUrl; if (pureId.includes('.')) { pureId = pureId.split('.')[0]; magnet.imageUrl = pureId; fixedCount++; } } } if (fixedCount > 0) { await saveToDB(); showToast(`自动修复了 ${fixedCount} 个卡片的图片引用`, false); } updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); }; input.click(); }
     async function fullRestoreWithImages() { if (typeof JSZip === 'undefined') { alert('JSZip库未加载，请刷新页面重试'); return; } const input = document.createElement('input'); input.type = 'file'; input.accept = '.zip'; input.onchange = async (e) => { const file = e.target.files[0]; if (!file) return; try { const zip = await JSZip.loadAsync(file); const dataFile = zip.file("data.json"); if (!dataFile) throw new Error("备份文件中缺少 data.json"); const dataJson = JSON.parse(await dataFile.async("string")); const backupTags = dataJson.tags || []; const backupMagnets = dataJson.magnets || []; const backupRules = dataJson.autoTagRules || []; const backupFilterWords = dataJson.filterWords || []; const tagIdMap = new Map(); let addedTagCount = 0; for (const bt of backupTags) { const existing = tags.find(t => t.name === bt.name); if (existing) { tagIdMap.set(bt.id, existing.id); } else { const newTag = { id: nextTagId++, name: bt.name }; tags.push(newTag); tagIdMap.set(bt.id, newTag.id); tagOrder.push(newTag.id); addedTagCount++; } } let addedCount = 0; const existingLinks = new Set(magnets.map(m => m.magnetLink.toLowerCase())); for (const bm of backupMagnets) { if (existingLinks.has(bm.magnetLink.toLowerCase())) continue; const newMagnet = { id: nextMagnetId++, magnetLink: bm.magnetLink, title: bm.title, imageUrl: bm.imageUrl, size: bm.size || '', tagIds: (bm.tagIds || []).map(tid => tagIdMap.has(tid) ? tagIdMap.get(tid) : tid).filter(tid => tags.some(t => t.id === tid)), rating: bm.rating || 0, createdAt: bm.createdAt || Date.now() }; magnets.push(newMagnet); existingLinks.add(bm.magnetLink.toLowerCase()); addedCount++; } const existingRuleKeys = new Set(autoTagRules.map(r => r.keyword.toLowerCase() + '|' + r.tagId)); for (const br of backupRules) { const mappedTagId = tagIdMap.has(br.tagId) ? tagIdMap.get(br.tagId) : br.tagId; if (existingRuleKeys.has(br.keyword.toLowerCase() + '|' + mappedTagId)) continue; autoTagRules.push({ keyword: br.keyword, tagId: mappedTagId }); existingRuleKeys.add(br.keyword.toLowerCase() + '|' + mappedTagId); } const existingFilterWordsSet = new Set(filterWords.map(w => w.toLowerCase())); for (const fw of backupFilterWords) { if (!existingFilterWordsSet.has(fw.toLowerCase())) { filterWords.push(fw); existingFilterWordsSet.add(fw.toLowerCase()); } } sortTagsByOrder(); await saveToDB(); await saveFilterWordsToDB(); failList = []; await saveFailListToDB(); const imgFolder = zip.folder("images"); let imgAdded = 0; let imgSkipped = 0; if (imgFolder) { const imgEntries = []; imgFolder.forEach((relativePath, file) => { const name = file.name; const ext = name.split('.').pop().toLowerCase(); if (['jpg','jpeg','png','webp','gif','bmp'].includes(ext)) imgEntries.push({ name, file }); }); const existingImgKeys = await new Promise((resolve, reject) => { const tx = db.transaction([STORES.images], 'readonly'); const store = tx.objectStore(STORES.images); const req = store.getAllKeys(); req.onsuccess = () => resolve(new Set(req.result.map(k => String(k)))); req.onerror = (err) => reject(err); }); const newImgEntries = []; for (const entry of imgEntries) { let id = entry.name; const lastDot = id.lastIndexOf('.'); if (lastDot !== -1) id = id.substring(0, lastDot); if (existingImgKeys.has(id)) { imgSkipped++; continue; } newImgEntries.push(entry); } if (newImgEntries.length > 0) { const imageMap = new Map(); for (const entry of newImgEntries) { const blob = await entry.file.async("blob"); let id = entry.name; const lastDot = id.lastIndexOf('.'); if (lastDot !== -1) id = id.substring(0, lastDot); imageMap.set(id, blob); } await new Promise((resolve, reject) => { const batchTx = db.transaction([STORES.images], 'readwrite'); const imgStore = batchTx.objectStore(STORES.images); let pending = imageMap.size; if (pending === 0) { resolve(); return; } for (const [id, blob] of imageMap.entries()) { const req = imgStore.put({ id: id, blob: blob, url: '', timestamp: Date.now() }); req.onsuccess = () => { pending--; if (pending === 0) resolve(); }; req.onerror = (err) => reject(err); } batchTx.onerror = (err) => reject(err); }); imgAdded = imageMap.size; } imageBlobCache.clear(); } else { imageBlobCache.clear(); } let fixedCount = 0; for (const magnet of magnets) { if (magnet.imageUrl && magnet.imageUrl.startsWith('img_')) { let pureId = magnet.imageUrl; if (pureId.includes('.')) { pureId = pureId.split('.')[0]; magnet.imageUrl = pureId; fixedCount++; } } } if (fixedCount > 0) showToast(`自动修复了 ${fixedCount} 个卡片的图片引用`, false); sortTagsByOrder(); await saveToDB(); await saveFilterWordsToDB(); failList = []; await saveFailListToDB(); await new Promise(r => setTimeout(r, 300)); updateFilteredList(); currentLoadedCount = 0; await renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); renderDraggable(); renderTagManagementList(); renderRulesList(); refreshRuleTagSelect(); renderFilterWordsList(); showToast(`增量恢复完成：新增 ${addedCount} 张卡片、${addedTagCount} 个标签、${imgAdded} 张图片（跳过 ${imgSkipped} 张已有图片）`); } catch(err) { alert('恢复失败：' + err.message); console.error(err); } }; input.click(); }
     function migrateOldRulesFromLocalStorage() { const oldKeys = ['magnet_manager_auto_tag_rules_v14','magnet_manager_auto_tag_rules_v13','magnet_manager_auto_tag_rules_v12','magnet_manager_auto_tag_rules_v11','magnet_manager_auto_tag_rules_v10','magnet_manager_auto_tag_rules_v9','magnet_manager_auto_tag_rules_v8','magnet_manager_auto_tag_rules_v7','magnet_manager_auto_tag_rules_v6','magnet_manager_auto_tag_rules_v5','magnet_manager_auto_tag_rules_v4','magnet_manager_auto_tag_rules_v3','magnet_manager_auto_tag_rules_v2','magnet_manager_auto_tag_rules_v1','magnet_manager_auto_tag_rules']; for (const key of oldKeys) { const old = localStorage.getItem(key); if (old) { try { const parsed = JSON.parse(old); if (Array.isArray(parsed) && parsed.length > 0) { autoTagRules = parsed; saveToDB().catch(console.error); showToast(`已自动迁移 ${autoTagRules.length} 条自动标签规则`); return; } } catch(e) {} } } }
-    function initTheme() { const savedTheme = localStorage.getItem('theme'); if (savedTheme === 'dark') { document.body.classList.add('dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } else { document.body.classList.remove('dark'); document.getElementById('themeToggleBtn').textContent = '🌙'; } }
-    function toggleTheme() { if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); document.getElementById('themeToggleBtn').textContent = '🌙'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); document.getElementById('themeToggleBtn').textContent = '☀️'; } }
+    function initTheme() { const savedTheme = localStorage.getItem('theme'); const btn = document.getElementById('themeToggleBtn'); if (savedTheme === 'dark') { document.body.classList.add('dark'); btn.innerHTML = '<i class=\"fas fa-sun\"></i>'; } else { document.body.classList.remove('dark'); btn.innerHTML = '<i class=\"fas fa-moon\"></i>'; } }
+    function toggleTheme() { const btn = document.getElementById('themeToggleBtn'); if (document.body.classList.contains('dark')) { document.body.classList.remove('dark'); localStorage.setItem('theme', 'light'); btn.innerHTML = '<i class=\"fas fa-moon\"></i>'; } else { document.body.classList.add('dark'); localStorage.setItem('theme', 'dark'); btn.innerHTML = '<i class=\"fas fa-sun\"></i>'; } }
 // ===== Google Drive 同步 =====
     let gdriveToken = null;
     let gdriveFileId = null;
