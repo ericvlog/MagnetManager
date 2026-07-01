@@ -953,6 +953,19 @@
     }
 
     async function ppCaptchaInit(deviceId, headers, meta) {
+        // 先尝试直连（用户真实 IP，可能绕过风控）
+        try {
+            const directResp = await fetch(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
+            if (directResp.ok) {
+                const data = await directResp.json();
+                if (data.captcha_token) {
+                    ppCaptchaData = data;
+                    return data.captcha_token;
+                }
+            }
+        } catch(e) { /* CORS 限制，走 Worker 代理 */ }
+
+        // 直连失败，走 Worker 代理
         const resp = await ppFetchPikPak(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
         if (!resp.ok) throw new Error('获取 captcha 失败: ' + await resp.text());
         const data = await resp.json();
@@ -961,6 +974,26 @@
     }
 
     async function ppTrySignIn(username, password, deviceId, headers, captchaToken) {
+        // 尝试直连登录（用户真实 IP）
+        try {
+            const directResp = await fetch(PP_SIGNIN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, client_secret:PP_CLIENT_SECRET, username, password, captcha_token:captchaToken, device_id:deviceId }) });
+            if (directResp.ok) {
+                const data = await directResp.json();
+                const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
+                const expiresAt = Date.now() + (data.expires_in || 7200) * 1000;
+                ppSet('token', fullToken); ppSet('refreshToken', data.refresh_token || '');
+                ppSet('expiresAt', String(expiresAt)); ppSet('captchaToken', captchaToken);
+                ppSet('deviceId', deviceId); ppSet('username', username); ppSet('password', password);
+                return data;
+            }
+            const errText = await directResp.text();
+            if (errText.includes('captcha_url') || errText.includes('result:review') || errText.includes('captcha_invalid')) return null;
+            throw new Error('登录失败: ' + errText);
+        } catch(e) {
+            // CORS 限制，走 Worker 代理
+        }
+
+        // 走 Worker 代理
         const resp = await ppFetchPikPak(PP_SIGNIN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, client_secret:PP_CLIENT_SECRET, username, password, captcha_token:captchaToken, device_id:deviceId }) });
         if (resp.ok) {
             const data = await resp.json();
@@ -972,9 +1005,7 @@
             return data;
         }
         const errText = await resp.text();
-        if (errText.includes('captcha_url') || errText.includes('result:review')) {
-            return null;
-        }
+        if (errText.includes('captcha_url') || errText.includes('result:review') || errText.includes('captcha_invalid')) return null;
         throw new Error('登录失败: ' + errText);
     }
 
@@ -1006,9 +1037,9 @@
         }
 
         if (!captchaUrl) {
-            statusEl.textContent = '❌ 无法获取安全验证链接';
+            statusEl.textContent = '❌ 操作过于频繁，请等待 30-60 分钟后重试';
             statusEl.style.color = '#ef4444';
-            throw new Error('无 captcha_url，无法完成安全验证');
+            throw new Error('操作过于频繁，请等待 30-60 分钟后重试');
         }
 
         // 显示 captcha iframe
@@ -1073,6 +1104,21 @@
 
     async function ppRefreshToken(refreshToken) {
         const headers = { 'Content-Type':'application/json;charset=utf-8', 'Accept':'application/json', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+        // 直连刷新
+        try {
+            const directResp = await fetch(PP_TOKEN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, grant_type:'refresh_token', refresh_token:refreshToken }) });
+            if (directResp.ok) {
+                const data = await directResp.json();
+                const fullToken = (data.token_type || 'Bearer') + ' ' + data.access_token;
+                const expiresAt = Date.now() + (data.expires_in || 7200) * 1000;
+                ppSet('token', fullToken); ppSet('refreshToken', data.refresh_token || refreshToken);
+                ppSet('expiresAt', String(expiresAt));
+                return data;
+            }
+            const t = await directResp.text(); let isIG = false; try { const j = JSON.parse(t); if (j.error === 'invalid_grant') isIG = true; } catch(e) {} const err = new Error('刷新失败: ' + t); err.isInvalidGrant = isIG; throw err;
+        } catch(e) { if (e.isInvalidGrant) throw e; /* CORS 失败则走 Worker */ }
+
+        // 走 Worker 代理
         const resp = await ppFetchPikPak(PP_TOKEN, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, grant_type:'refresh_token', refresh_token:refreshToken }) });
         if (!resp.ok) { const t = await resp.text(); let isIG = false; try { const j = JSON.parse(t); if (j.error === 'invalid_grant') isIG = true; } catch(e) {} const err = new Error('刷新失败: ' + t); err.isInvalidGrant = isIG; throw err; }
         const data = await resp.json();
@@ -1101,6 +1147,13 @@
         const payload = { kind:"drive#file", upload_type:"UPLOAD_TYPE_URL", url:{"url":magnetLink}, params:{from:'manual', with_thumbnail:'true'}, folder_type:'DOWNLOAD' };
         const headers = { 'Content-Type':'application/json', 'Authorization':token, 'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
         if (s.captchaToken) headers['x-captcha-token'] = s.captchaToken;
+        // 直连
+        try {
+            let r = await fetch('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
+            if (r.ok) return r.json();
+            if ((r.status === 401 || r.status === 403) && s.refreshToken) { await ppRefreshToken(s.refreshToken); headers['Authorization'] = ppGet('token'); r = await fetch('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) }); if (r.ok) return r.json(); }
+        } catch(e) {}
+        // 走 Worker 代理
         let resp = await ppFetchPikPak('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
         if ((resp.status === 401 || resp.status === 403) && s.refreshToken) {
             await ppRefreshToken(s.refreshToken);
