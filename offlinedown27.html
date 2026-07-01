@@ -944,19 +944,24 @@
     const PP_REFRESH_INTERVAL = 10 * 60 * 1000;
     let ppRefreshTimer = null;
 
+    async function ppTryRefresh() {
+        const s = ppGetAll();
+        if (!s.token) return;
+        if (s.expiresAt > Date.now() + 600000) return;
+        if (s.refreshToken) {
+            try { await ppRefreshToken(s.refreshToken); return; } catch (e) {}
+        }
+        if (s.username && s.password) {
+            try { await ppLogin(s.username, s.password); return; } catch (e) {}
+        }
+    }
+
     function ppStartAutoRefresh() {
         if (ppRefreshTimer) clearInterval(ppRefreshTimer);
-        ppRefreshTimer = setInterval(async () => {
-            const s = ppGetAll();
-            if (!s.token) return;
-            if (s.expiresAt > Date.now() + 600000) return;
-            if (s.refreshToken) {
-                try { await ppRefreshToken(s.refreshToken); return; } catch (e) {}
-            }
-            if (s.username && s.password) {
-                try { await ppLogin(s.username, s.password); return; } catch (e) {}
-            }
-        }, PP_REFRESH_INTERVAL);
+        ppRefreshTimer = setInterval(ppTryRefresh, PP_REFRESH_INTERVAL);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') ppTryRefresh();
+        });
     }
 
     // ----- 修改：sendToPikPakViaBridge 增加直连回退 -----
