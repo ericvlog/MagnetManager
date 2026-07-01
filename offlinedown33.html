@@ -793,7 +793,7 @@
 <div id="gdriveModal" class="modal"><div class="modal-card" style="max-width:420px;"><div class="flex-between"><h3>☁️ Google Drive 云端</h3><button id="closeGdriveModalBtn" class="icon-btn">✖</button></div><div style="padding:1.5rem;display:flex;flex-direction:column;gap:16px;"><div id="gdriveLoginSection" style="display:flex;align-items:center;justify-content:space-between;"><span id="gdriveUserStatus" style="font-weight:600;">未登录</span><button id="gdriveLoginBtn" class="btn" style="background:#4285f4;color:white;">🔑 登录</button></div><div id="gdriveActionsSection" style="display:none;flex-direction:column;gap:12px;"><div style="display:flex;gap:10px;flex-wrap:wrap;"><button id="gdriveBackupBtn" class="btn btn-success" style="flex:1;">☁️ 备份到云端</button><button id="gdriveRestoreBtn" class="btn btn-primary" style="flex:1;">☁️ 从云端恢复</button></div><button id="gdriveCleanupBtn" class="btn btn-outline">🧹 清理云端孤儿图片</button><div id="gdriveStatus" style="font-size:0.85rem;padding:8px 12px;background:var(--tag-bg);border-radius:12px;"></div><div id="gdriveQuotaStatus" style="font-size:0.85rem;color:#64748b;text-align:center;"></div></div></div></div></div>
 
 <!-- ===== PikPak 登录模态框（无扩展时使用） ===== -->
-<div id="pikpakModal" class="modal"><div class="modal-card" style="max-width:420px;"><div class="flex-between"><h3>🔑 PikPak 登录（页面直连）</h3><button id="closePikpakModalBtn" class="icon-btn">✖</button></div><div style="padding:1.5rem;display:flex;flex-direction:column;gap:14px;"><div style="font-size:0.85rem;line-height:1.5;color:var(--text-secondary);">登录后可在无扩展环境下（如手机浏览器）直接离线下载到 PikPak。密码仅存储在你本地浏览器中。</div><input type="text" id="pagePikpakUser" placeholder="邮箱 / 手机号 / 用户名" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><input type="password" id="pagePikpakPass" placeholder="密码" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><div id="pagePikpakStatus" style="font-size:0.85rem;padding:8px 12px;background:var(--tag-bg);border-radius:12px;text-align:center;">未登录</div><div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;"><button id="pagePikpakLoginBtn2" class="btn btn-primary" style="flex:1;">登录</button><button id="pagePikpakRefreshBtn" class="btn btn-outline" style="display:none;flex:1;">🔄 刷新 Token</button><button id="pagePikpakLogoutBtn" class="btn btn-danger" style="display:none;flex:1;">退出登录</button></div></div></div></div>
+<div id="pikpakModal" class="modal"><div class="modal-card" style="max-width:420px;"><div class="flex-between"><h3>🔑 PikPak 登录（页面直连）</h3><button id="closePikpakModalBtn" class="icon-btn">✖</button></div><div style="padding:1.5rem;display:flex;flex-direction:column;gap:14px;"><div style="font-size:0.85rem;line-height:1.5;color:var(--text-secondary);">登录后可在无扩展环境下（如手机浏览器）直接离线下载到 PikPak。密码仅存储在你本地浏览器中。</div><input type="text" id="pagePikpakUser" placeholder="邮箱 / 手机号 / 用户名" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><input type="password" id="pagePikpakPass" placeholder="密码" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);"><div id="pagePikpakStatus" style="font-size:0.85rem;padding:8px 12px;background:var(--tag-bg);border-radius:12px;text-align:center;">未登录</div><div style="display:flex;align-items:center;gap:6px;font-size:0.77rem;"><input type="text" id="ppProxyInput" value="" placeholder="CORS 代理地址" style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);font-size:inherit;"><button id="ppSaveProxyBtn" style="padding:4px 10px;border-radius:8px;border:1px solid var(--input-border);background:var(--btn-bg);color:var(--text-primary);cursor:pointer;font-size:inherit;">保存</button><span id="ppProxyPingResult" style="font-size:0.8rem;margin-left:auto;"></span></div><div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;"><button id="pagePikpakLoginBtn2" class="btn btn-primary" style="flex:1;">登录</button><button id="pagePikpakRefreshBtn" class="btn btn-outline" style="display:none;flex:1;">🔄 刷新 Token</button><button id="pagePikpakLogoutBtn" class="btn btn-danger" style="display:none;flex:1;">退出登录</button></div></div></div></div>
 
 <script>
 (function(){
@@ -902,7 +902,15 @@
     const PP_SIGNIN = 'https://user.mypikpak.com/v1/auth/signin';
     const PP_TOKEN = 'https://user.mypikpak.com/v1/auth/token';
 
-    const PP_CORS_PROXY = 'http://localhost:3000/?url=';
+    const PP_CORS_PROXY = (() => {
+  try {
+    const saved = localStorage.getItem('pp_cors_proxy');
+    if (saved) return saved;
+    // 自动补全为当前页面的完整地址
+    const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+    return base + '?url=';
+  } catch(e) { return '/?url='; }
+})();
 
     async function ppFetchPikPak(url, options) {
         const proxyUrl = PP_CORS_PROXY + encodeURIComponent(url);
@@ -932,7 +940,10 @@
 
         const captchaResp = await ppFetchPikPak(PP_CAPTCHA_INIT, { method:'POST', headers, body:JSON.stringify({ client_id:PP_CLIENT_ID, action:'POST:/v1/auth/signin', device_id:deviceId, meta }) });
         if (!captchaResp.ok) throw new Error('获取 captcha 失败: ' + await captchaResp.text());
-        const captchaData = await captchaResp.json();
+        let captchaData;
+        try { captchaData = await captchaResp.json(); } catch(e) {
+          throw new Error('captcha 响应非 JSON: ' + (await captchaResp.text()).substring(0,200));
+        }
         const captchaToken = captchaData.captcha_token || '';
         if (!captchaToken) throw new Error('获取 captcha_token 失败');
 
@@ -983,8 +994,11 @@
             headers['Authorization'] = ppGet('token');
             resp = await ppFetchPikPak('https://api-drive.mypikpak.com/drive/v1/files', { method:'POST', headers, body:JSON.stringify(payload) });
         }
-        if (!resp.ok) { const d = await resp.json().catch(() => {}); throw new Error((d && d.error_description) || `HTTP ${resp.status}`); }
-        return resp.json();
+        const offlineBody = await resp.text();
+        if (!resp.ok) { let d; try { d = JSON.parse(offlineBody); } catch(e) {} throw new Error((d && d.error_description) || `HTTP ${resp.status}`); }
+        let d;
+        try { d = JSON.parse(offlineBody); } catch(e) { throw new Error('离线响应非 JSON: ' + offlineBody.substring(0,200)); }
+        return d;
     }
 
     function ppUpdateLoginUI() {
@@ -2944,7 +2958,47 @@ document.getElementById('gdriveManageBtn').onclick = async () => { await initGDr
     document.getElementById('gdriveCleanupBtn').onclick = cleanupGDriveOrphanImages;
 
         // ===== PikPak 直连登录 =====
-        document.getElementById('pagePikpakLoginBtn').onclick = () => { ppUpdateLoginUI(); document.getElementById('pikpakModal').style.display = 'flex'; };
+// ===== CORS 代理地址配置 =====
+        (function(){
+            const input = document.getElementById('ppProxyInput');
+            const result = document.getElementById('ppProxyPingResult');
+            const saved = localStorage.getItem('pp_cors_proxy');
+            if (saved) input.value = saved;
+            else input.value = '/?url=';
+            async function testProxy() {
+                const proxyBase = input.value.trim();
+                if (!proxyBase) { result.textContent = ''; return; }
+                result.textContent = '测试中...';
+                result.style.color = '#306eff';
+                try {
+                    // 只测代理服务器是否可达（不带目标 URL，服务器会返回 400，但这证明代理活着的）
+                    const baseUrl = proxyBase.split('?')[0];
+                    const resp = await fetch(baseUrl, { method: 'GET', mode: 'cors' });
+                    // 只要收到响应（哪怕 400）就说明代理服务器在线
+                    result.textContent = '代理连通 ✓';
+                    result.style.color = '#28a745';
+                } catch (e) {
+                    result.textContent = '无法连接 ✗';
+                    result.style.color = '#ef4444';
+                }
+            }
+            input.addEventListener('change', testProxy);
+            document.getElementById('ppSaveProxyBtn').onclick = () => {
+                const val = input.value.trim();
+                if (val) {
+                    localStorage.setItem('pp_cors_proxy', val);
+                    testProxy();
+                }
+            };
+            // 检测到模态框打开时自动测试
+            const observer = new MutationObserver(() => {
+                if (document.getElementById('pikpakModal').style.display === 'flex') {
+                    setTimeout(testProxy, 500);
+                }
+            });
+            observer.observe(document.getElementById('pikpakModal'), { attributes: true, attributeFilter: ['style'] });
+        })();
+document.getElementById('pagePikpakLoginBtn').onclick = () => { ppUpdateLoginUI(); document.getElementById('pikpakModal').style.display = 'flex'; };
         document.getElementById('closePikpakModalBtn').onclick = () => document.getElementById('pikpakModal').style.display = 'none';
         document.getElementById('pikpakModal').onclick = (e) => { if (e.target === e.currentTarget) document.getElementById('pikpakModal').style.display = 'none'; };
         document.getElementById('pagePikpakLoginBtn2').onclick = async () => {
