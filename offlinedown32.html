@@ -2852,7 +2852,6 @@ async function renderLoadedCards() {
         document.getElementById('menuImportData').onclick = importSingleFile;
         document.getElementById('menuResetData').onclick = resetAllData;
         document.getElementById('topAddMagnetBtn').onclick = openBatchAddModal;
-        document.getElementById('topImportClipboardBtn').onclick = importFromClipboard;
         document.getElementById('floatHideImageBtn').onclick = () => {
             document.body.classList.toggle('hide-images');
             const btn = document.getElementById('floatHideImageBtn');
@@ -2882,12 +2881,7 @@ async function renderLoadedCards() {
         document.getElementById('searchInput').addEventListener('input', () => { selectedCardIds.clear(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); if (selectionMode) updateSelectedCount(); });
         document.getElementById('copyAllBatchLinksBtn').onclick = () => { const links = Array.from(document.querySelectorAll('#batchLinksContainer .batch-link-item')).map(a => a.textContent); if (links.length === 0) return; navigator.clipboard.writeText(links.join('\n')).then(() => showToast(`已复制 ${links.length} 个链接到剪贴板`, false)).catch(() => alert('复制失败')); };
         bindModalRestore();
-// 直接实现隐藏图片功能，无需单独函数
-        document.getElementById('hideImageBtn').addEventListener('click', function() {
-            document.body.classList.toggle('hide-images');
-            const hidden = document.body.classList.contains('hide-images');
-            this.innerHTML = hidden ? '<i class="fas fa-eye"></i> 显示图片' : '<i class="fas fa-image"></i> 隐藏图片';
-        });
+
         document.getElementById('closeFilterWordsModalBtn').onclick = () => document.getElementById('filterWordsModal').style.display = 'none';
         document.getElementById('addFilterWordBtn').onclick = addFilterWord;
         document.getElementById('newFilterWord').addEventListener('keypress', (e) => { if (e.key === 'Enter') addFilterWord(); });
