@@ -844,7 +844,7 @@
         const toolbarHeader = document.querySelector('#toolbarDragArea .drag-header');
         if (toolbarHeader) {
             const toolbarIcon = toolbarHeader.querySelector('.toggle-icon');
-            let collapsedToolbar = localStorage.getItem('collapsed_toolbar') === 'true';
+            let collapsedToolbar = localStorage.getItem('collapsed_toolbar') !== 'false';
             toolbarHeader.addEventListener('click', () => { collapsedToolbar = !collapsedToolbar; toggleContent('toolbarContent', toolbarIcon, collapsedToolbar); localStorage.setItem('collapsed_toolbar', collapsedToolbar); });
             toggleContent('toolbarContent', toolbarIcon, collapsedToolbar);
         }
@@ -2898,7 +2898,11 @@ async function renderLoadedCards() {
         document.getElementById('addTagBtn').onclick = async () => { let name = document.getElementById('newTagName').value.trim(); if(name) { const newId = nextTagId++; tags.push({ id: newId, name }); tagOrder.push(newId); saveTagOrder(); await saveToDB(); updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); document.getElementById('newTagName').value = ''; refreshRuleTagSelect(); renderRulesList(); renderDraggable(); renderTagManagementList(); } };
         document.getElementById('addRuleBtn').onclick = addRule;
         document.getElementById('resetFilterBtn').onclick = () => { document.getElementById('searchInput').value = ''; updateFilteredList(); currentLoadedCount = 0; renderLoadedCards(); updateStats(allFilteredMagnets.length, magnets.length); };
-        document.getElementById('toggleSidebarBtn').onclick = () => document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('toggleSidebarBtn').onclick = () => {
+    const s = document.getElementById('sidebar');
+    s.classList.toggle('collapsed');
+    localStorage.setItem('sidebar_collapsed', s.classList.contains('collapsed'));
+};
         document.getElementById('mobileHamburgerBtn').onclick = () => document.getElementById('sidebar').classList.toggle('open');
         document.getElementById('sidebarOverlay').onclick = () => document.getElementById('sidebar').classList.remove('open');
 
@@ -3251,6 +3255,48 @@ document.getElementById('pagePikpakLoginBtn').onclick = () => { ppUpdateLoginUI(
             if (autoTagRules.length === 0) migrateOldRulesFromLocalStorage();
             loadCollapsedState();
             bindButtons();
+            // 侧栏 + 工具栏 默认折叠 + 悬停展开
+            (function(){
+                const sb = document.getElementById('sidebar');
+                const isCollapsed = localStorage.getItem('sidebar_collapsed') !== 'false';
+                if (isCollapsed) sb.classList.add('collapsed');
+                let hoverTimer = null;
+                sb.addEventListener('mouseenter', () => {
+                    if (!sb.classList.contains('collapsed')) return;
+                    clearTimeout(hoverTimer);
+                    sb.classList.remove('collapsed');
+                });
+                sb.addEventListener('mouseleave', () => {
+                    if (localStorage.getItem('sidebar_collapsed') !== 'false') {
+                        hoverTimer = setTimeout(() => {
+                            if (!sb.matches(':hover')) sb.classList.add('collapsed');
+                        }, 300);
+                    }
+                });
+            })();
+            (function(){
+                const tb = document.getElementById('toolbarDragArea');
+                if (!tb) return;
+                const content = document.getElementById('toolbarContent');
+                const icon = tb.querySelector('.toggle-icon');
+                let hoverTimer = null;
+                tb.addEventListener('mouseenter', () => {
+                    if (!content.classList.contains('collapsed')) return;
+                    clearTimeout(hoverTimer);
+                    content.classList.remove('collapsed');
+                    if (icon) icon.classList.remove('collapsed');
+                });
+                tb.addEventListener('mouseleave', () => {
+                    if (localStorage.getItem('collapsed_toolbar') !== 'false') {
+                        hoverTimer = setTimeout(() => {
+                            if (!tb.matches(':hover')) {
+                                content.classList.add('collapsed');
+                                if (icon) icon.classList.add('collapsed');
+                            }
+                        }, 300);
+                    }
+                });
+            })();
             bindDelegatedEvents();
             renderAll();
             updateStats(allFilteredMagnets.length, magnets.length);
